@@ -216,8 +216,8 @@ export const useGameStore = create((set, get) => ({
     rhino: {
       type: 'rhino',
       speed: 1.2,
-      hp: 2100,
-      maxHp: 2100,
+      hp: 1600,
+      maxHp: 1600,
       size: 60,
       damage: 25,
       reward: 60,
@@ -260,8 +260,8 @@ export const useGameStore = create((set, get) => ({
     boss: {
       type: 'boss',
       speed: 0.6,      // Босс движется медленнее и величественнее
-      hp: 1000,          // Будет пересчитано в 4 раза больше базового вида в генераторе волн
-      maxHp: 100,
+      hp: 800,          // Будет пересчитано в 4 раза больше базового вида в генераторе волн
+      maxHp: 800,
       size: 78,         // Матка должна быть огромной визуально!
       damage: 40,       // Огромный урон базе, если дойдет
       reward: 150,      // Щедрая награда в кредитах
@@ -289,9 +289,9 @@ export const useGameStore = create((set, get) => ({
       name: 'Пулемет',
       cost: 100,
       range: 95,
-      damage: 5500, // Среднее для совместимости
-      minDamage: 5000,
-      maxDamage: 6000,
+      damage: 550, // Среднее для совместимости
+      minDamage: 500,
+      maxDamage: 600,
       critChance: 0.08,     // 8% на 1 уровне
       critMultiplier: 1.5,  // 150% урона на 1 уровне
       fireRate: 20,
@@ -306,9 +306,9 @@ export const useGameStore = create((set, get) => ({
       name: 'Бомбарда',
       cost: 200,
       range: 85,
-      damage: 1850,
-      minDamage: 1750,
-      maxDamage: 1950,
+      damage: 185,
+      minDamage: 175,
+      maxDamage: 195,
       critChance: 0.08,     // 8% на 1 уровне
       critMultiplier: 1.5,  // 150% урона на 1 уровне
       fireRate: 45,
@@ -326,7 +326,7 @@ export const useGameStore = create((set, get) => ({
       type: 'silo',
       name: 'Ракетная Шахта',
       cost: 500,
-      range: 9999, // Почти вся карта
+      range: 9999,
       size: 60,
       isRocketSilo: true,
       unlockWave: 1
