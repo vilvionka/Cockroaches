@@ -1,0 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Orbitron:wght@400..900&display=swap');
+
+body,
+button,
+input {
+  font-family: 'Montserrat', sans-serif;
+}
+
+h1,
+h2,
+h3,
+.bar_header {
+  font-family: 'Russo One', sans-serif !important;
+  letter-spacing: 2.5px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background: #242424;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-family: 'Montserrat', sans-serif;
+}

@@ -1,0 +1,1293 @@
+@import url('https://googleapis.com');
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100vw;
+  background-color: #06090e;
+  min-height: 100vh;
+  font-family: 'Montserrat', sans-serif;
+}
+
+.game {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  margin-top: 20px;
+  gap: 1px;
+}
+
+/* --- МАГАЗИН (БОКОВАЯ ПАНЕЛЬ) --- */
+.bar {
+  width: 230px;
+  height: 600px;
+  background: linear-gradient(180deg, rgba(10, 19, 30, 0.96) 0%, rgba(5, 10, 15, 0.98) 100%);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  border-left: 4px solid #00e5ff;
+  border-radius: 2px;
+  padding: 16px 12px;
+  box-shadow: 0 0 35px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0, 229, 255, 0.05);
+  color: #eceff1;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.bar_header {
+  text-align: center;
+  margin: 0 0 14px 0;
+  padding-bottom: 10px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+  border-bottom: 1px dashed rgba(0, 229, 255, 0.2);
+}
+
+/* --- ТАКТИЧЕСКИЙ СЧЕТЧИК ЗОЛОТА --- */
+.bar_gold {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(212, 175, 55, 0.03);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-right: 3px solid #d4af37;
+  border-radius: 2px;
+  padding: 8px 12px;
+  margin-bottom: 20px;
+  box-sizing: border-box;
+  box-shadow: inset 0 0 10px rgba(212, 175, 55, 0.05);
+}
+
+.gold_label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #647c94;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.gold_value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+  letter-spacing: 0.5px;
+}
+
+.bar_gun {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #647c94;
+  margin-bottom: 8px;
+}
+
+/* --- СЕТКА КАРТОЧЕК --- */
+.bar_grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+/* --- КВАДРАТНЫЕ КАРТОЧКИ БАШЕН --- */
+.bar_button {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px;
+  border-radius: 2px;
+  box-sizing: border-box;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+
+  /* Дефолтный стиль доступной карточки */
+  background: radial-gradient(circle, rgba(16, 32, 50, 0.4) 0%, rgba(8, 14, 22, 0.75) 100%);
+  border: 1px solid rgba(0, 229, 255, 0.12);
+  cursor: pointer;
+}
+
+/* Состояние: Выбрана текущая пушка (data-selected="true") */
+.bar_button[data-selected="true"] {
+  background: radial-gradient(circle, rgba(0, 229, 255, 0.15) 0%, rgba(0, 60, 75, 0.4) 100%);
+  border: 1px solid #00e5ff;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
+}
+
+/* Состояние: Заблокирована по уровню (data-locked="true") */
+.bar_button[data-locked="true"] {
+  background: rgba(18, 24, 33, 0.5);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  cursor: not-allowed;
+}
+
+/* Состояние: Не хватает золота (работает стандартный псевдокласс :disabled, если не заблокирована) */
+.bar_button:disabled:not([data-locked="true"]) {
+  background: rgba(12, 18, 26, 0.4);
+  cursor: not-allowed;
+}
+
+/* Картинка башни внутри ячейки */
+.tower_img {
+  width: 65%;
+  height: 65%;
+  object-fit: contain;
+  margin-top: 4px;
+  transition: filter 0.2s ease;
+}
+
+/* Затемняем картинку, если кнопка отключена (нет денег) */
+.bar_button:disabled .tower_img {
+  filter: grayscale(0.6) brightness(0.5);
+}
+
+.tower_info_block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.tower_name {
+  font-size: 10px;
+  font-weight: 600;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar_price {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  color: #d4af37;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+/* Эффект ховера только для полностью доступных кнопок */
+.bar_button:hover:not(:disabled) {
+  filter: brightness(1.2);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.25) !important;
+}
+
+/* --- СЛОЙ ДЛЯ БЛОКИРОВКИ --- */
+.lock_layer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  gap: 4px;
+  background: rgba(4, 8, 14, 0.3);
+}
+
+.lock_icon {
+  font-size: 14px;
+  opacity: 0.6;
+}
+
+.lock_text {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 9px;
+  color: #647c94;
+  text-transform: uppercase;
+}
+
+/* --- ТАКТИЧЕСКИЙ БЛОК ВОЛНЫ И УРОВНЯ --- */
+.bar_info {
+  margin-top: 8px;
+  font-size: 10px;
+  color: #ff9800;
+  text-align: center;
+  font-style: italic;
+}
+
+.bar_info_btn {
+  margin-top: auto;
+  width: 100%;
+}
+
+.level_status_block {
+  margin-top: 14px;
+  background: rgba(4, 8, 14, 0.8);
+  border: 1px solid rgba(0, 229, 255, 0.15);
+  border-radius: 2px;
+  padding: 6px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bar_info_level {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.level_title {
+  margin: 0;
+  font-family: 'Orbitron', sans-serif;
+  color: #00e5ff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
+}
+
+.wave_subtitle {
+  font-weight: 600;
+  font-size: 10px;
+  color: #647c94;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* --- КНОПКИ ДЕЙСТВИЙ (В БОЙ / СЛЕДУЮЩИЙ УРОВЕНЬ) --- */
+.bar_btn_weln {
+  width: 100%;
+  padding: 10px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #ffffff;
+  border-radius: 2px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn_wave_ready {
+  background: linear-gradient(90deg, rgba(180, 70, 0, 0.4) 0%, rgba(245, 124, 0, 0.8) 50%, rgba(180, 70, 0, 0.4) 100%);
+  border: 1px solid #ff9800;
+  box-shadow: 0 0 15px rgba(245, 124, 0, 0.25);
+}
+
+.btn_wave_ready:hover {
+  background: linear-gradient(90deg, rgba(180, 70, 0, 0.6) 0%, rgba(255, 152, 0, 0.9) 50%, rgba(180, 70, 0, 0.6) 100%);
+  box-shadow: 0 0 22px rgba(255, 152, 0, 0.45);
+}
+
+.btn_wave_active {
+  background: rgba(20, 28, 38, 0.5);
+  border: 1px solid rgba(100, 124, 148, 0.2);
+  color: #435261;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn_next_level {
+  background: linear-gradient(90deg, rgba(46, 125, 50, 0.3) 0%, rgba(76, 175, 80, 0.7) 50%, rgba(46, 125, 50, 0.3) 100%);
+  border: 1px solid #4caf50;
+  animation: pulseAnimation 2.2s infinite ease-in-out;
+}
+
+.btn_next_level:hover {
+  background: linear-gradient(90deg, rgba(46, 125, 50, 0.5) 0%, rgba(76, 175, 80, 0.9) 50%, rgba(46, 125, 50, 0.3) 100%);
+  box-shadow: 0 0 18px rgba(76, 175, 80, 0.4);
+}
+
+.bar_btn_restart {
+  width: 100%;
+  padding: 12px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(90deg, rgba(183, 28, 28, 0.3) 0%, rgba(239, 83, 80, 0.7) 50%, rgba(183, 28, 28, 0.3) 100%);
+  border: 1px solid #ef5350;
+  border-radius: 2px;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: 0 4px 15px rgba(211, 47, 47, 0.2);
+  transition: all 0.2s ease;
+}
+
+.bar_btn_restart:hover {
+  background: linear-gradient(90deg, rgba(183, 28, 28, 0.5) 0%, rgba(239, 83, 80, 0.9) 50%, rgba(183, 28, 28, 0.3) 100%);
+  box-shadow: 0 0 18px rgba(239, 83, 80, 0.45);
+}
+
+/* --- ИНДИКАТОР ЗДОРОВЬЯ БАЗЫ --- */
+.baze {
+  margin-top: 16px;
+  background: rgba(10, 19, 30, 0.9);
+  border-left: 3px solid #ff5252;
+  padding: 8px 14px;
+  border-radius: 2px;
+  font-size: 13px;
+  color: #647c94;
+  font-family: 'Orbitron', sans-serif;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+.baze_value {
+  color: #ff5252;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(255, 82, 82, 0.4);
+}
+
+@keyframes pulseAnimation {
+  0% {
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 20px rgba(76, 175, 80, 0.45);
+  }
+
+  100% {
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.2);
+  }
+}
+
+
+/* --- СТИЛИ ПАНЕЛИ УЛУЧШЕНИЙ --- */
+.upgrade_panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.panel_tower_name {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.panel_tower_level {
+  font-size: 11px;
+  color: #647c94;
+  margin-bottom: 12px;
+}
+
+.cyan_text {
+  color: #00e5ff;
+  font-weight: 700;
+}
+
+.specs_block {
+  background: rgba(4, 8, 14, 0.5);
+  border: 1px solid rgba(0, 229, 255, 0.1);
+  padding: 8px;
+  border-radius: 2px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.spec_row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #8093a6;
+}
+
+.gold_text {
+  font-family: 'Orbitron', sans-serif;
+  color: #ffd700;
+  font-weight: 700;
+}
+
+/* Мобильные кнопки действий апгрейда и продажи */
+.action_btn {
+  width: 100%;
+  padding: 3px 10px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  border-radius: 2px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.action_price {
+  font-size: 11px;
+}
+
+/* Кнопка Улучшить (Сине-бирюзовая) */
+.btn_upgrade {
+  background: linear-gradient(90deg, rgba(0, 145, 234, 0.3) 0%, rgba(0, 229, 255, 0.6) 50%, rgba(0, 145, 234, 0.3) 100%);
+  border: 1px solid #00e5ff;
+}
+
+.btn_upgrade:hover:not(:disabled) {
+  background: linear-gradient(90deg, rgba(0, 145, 234, 0.5) 0%, rgba(0, 229, 255, 0.8) 50%, rgba(0, 145, 234, 0.5) 100%);
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+}
+
+.btn_upgrade:disabled {
+  background: rgba(20, 28, 38, 0.4);
+  border: 1px solid rgba(100, 124, 148, 0.15);
+  color: #435261;
+  cursor: not-allowed;
+}
+
+.btn_upgrade:disabled .action_price {
+  color: #435261;
+}
+
+/* Кнопка Продать (Приглушенно-бордовая) */
+.btn_sell {
+  background: linear-gradient(90deg, rgba(141, 110, 99, 0.2) 0%, rgba(211, 47, 47, 0.5) 50%, rgba(141, 110, 99, 0.2) 100%);
+  border: 1px solid #e53935;
+}
+
+.btn_sell:hover {
+  background: linear-gradient(90deg, rgba(141, 110, 99, 0.4) 0%, rgba(211, 47, 47, 0.7) 50%, rgba(141, 110, 99, 0.4) 100%);
+  box-shadow: 0 0 15px rgba(211, 47, 47, 0.25);
+}
+
+.boosts_grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.boost_btn {
+  width: 100%;
+  padding: 3px 10px;
+  background: rgba(6, 11, 19, 0.6);
+  border-radius: 2px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.boost_btn:hover:not(:disabled) {
+  background: rgba(30, 41, 59, 0.5);
+}
+
+.boost_btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.boost_count {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+
+.bar_gold_panel {
+  display: flex;
+  flex-direction: column;
+  background: rgba(212, 175, 55, 0.02);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  border-right: 3px solid #d4af37;
+  border-radius: 2px;
+  padding: 8px 10px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+  box-shadow: inset 0 0 10px rgba(212, 175, 55, 0.03);
+  gap: 8px;
+}
+
+/* Строка с золотом внутри общей панели */
+.bar_gold_row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Линейка отображения бустов под золотом */
+.boosts_info_bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px dashed rgba(100, 124, 148, 0.2);
+  padding-top: 6px;
+  margin-top: 2px;
+}
+
+.boost_info_item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Цветная круглая неоновая точка-иконка */
+.boost_dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 8px;
+  font-weight: 900;
+  color: #000000;
+  box-shadow: 0 0 6px currentColor;
+}
+
+/* Текст количества x0 */
+.boost_val {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #b0bec5;
+}
+
+
+/* --- СТИЛИ ДЛЯ Sci-Fi ТАБОВ МАГАЗИНА --- */
+.tabs_container {
+  display: flex;
+  width: 100%;
+  gap: 4px;
+  background: rgba(4, 8, 14, 0.6);
+  border: 1px solid rgba(0, 229, 255, 0.15);
+  padding: 2px;
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+
+.tab_btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #647c94;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 6px 2px;
+  cursor: pointer;
+  border-radius: 1px;
+  transition: all 0.2s ease;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.tab_btn[data-active="true"] {
+  background: rgba(0, 229, 255, 0.15);
+  color: #00e5ff;
+  text-shadow: 0 0 6px rgba(0, 229, 255, 0.5);
+  box-shadow: inset 0 0 5px rgba(0, 229, 255, 0.2);
+}
+
+.tab_btn:hover:not(:disabled):not([data-active="true"]) {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+
+.spec_choice_wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 6px;
+  background: rgba(255, 152, 0, 0.05);
+  border: 1px dashed rgba(255, 152, 0, 0.2);
+  padding: 8px;
+  box-sizing: border-box;
+  border-radius: 2px;
+  margin-bottom: 10px;
+}
+
+.spec_buttons_row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.spec_select_btn {
+  width: 100%;
+  background: rgba(10, 20, 30, 0.8);
+  border: 1px solid #4caf50;
+  color: #4caf50;
+  border-radius: 2px;
+  padding: 6px;
+  cursor: pointer;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.spec_select_btn small {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 8px;
+  color: #b0bec5;
+  font-weight: 500;
+  text-transform: none;
+  display: block;
+  margin-top: 2px;
+}
+
+.spec_select_btn:hover:not(:disabled) {
+  filter: brightness(1.3);
+  box-shadow: 0 0 10px currentColor;
+}
+
+.spec_select_btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  border-color: #435261 !important;
+  color: #435261 !important;
+}
+
+
+.launch_tactical_btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  background: linear-gradient(90deg, #b71c1c 0%, #e53935 50%, #b71c1c 100%);
+  border: 1px solid #ff5252;
+  color: white;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+  border-radius: 2px;
+  box-shadow: 0 0 15px rgba(229, 57, 53, 0.4);
+  letter-spacing: 1px;
+}
+
+.launch_tactical_btn:hover:not(:disabled) {
+  filter: brightness(1.2);
+  box-shadow: 0 0 25px rgba(255, 82, 82, 0.6);
+}
+
+.launch_tactical_btn:disabled {
+  background: #1a1a1a;
+  border-color: #333;
+  color: #555;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+
+/* Контейнер, удерживающий Canvas и интерфейс поверх него */
+.canvas_container {
+  position: relative;
+  width: 800px;
+  height: 600px;
+}
+
+/* Верхняя Sci-Fi панель отчетов */
+.top_hud {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  height: 38px;
+  background: linear-gradient(180deg, rgba(6, 12, 20, 0.9) 0%, rgba(3, 6, 10, 0.95) 100%);
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), inset 0 0 10px rgba(0, 229, 255, 0.05);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  box-sizing: border-box;
+  z-index: 10;
+  /* Перекрывает холст */
+
+  /* Пропускает клики мыши сквозь себя на Canvas */
+}
+
+.hud_label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: #647c94;
+  letter-spacing: 1px;
+  margin-right: 6px;
+}
+
+/* Стили счетчиков */
+.hud_value_cyan {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #00e5ff;
+  text-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+}
+
+.hud_value_gold {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffd700;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+}
+
+.hud_wave_going {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 12px;
+  font-weight: 900;
+  color: #ff5252;
+  text-shadow: 0 0 10px rgba(255, 82, 82, 0.6);
+  animation: blink 1s infinite alternate;
+}
+
+/* Индикатор здоровья базы-торта */
+.hud_hp_block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hp_bar_bg {
+  width: 120px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 82, 82, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.hp_bar_fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff1744 0%, #ff5252 100%);
+  box-shadow: 0 0 6px #ff5252;
+  transition: width 0.2s ease-out;
+}
+
+.hp_text {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ff5252;
+  text-shadow: 0 0 6px rgba(255, 82, 82, 0.4);
+  min-width: 25px;
+  text-align: right;
+}
+
+@keyframes blink {
+  0% {
+    opacity: 0.4;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+
+
+/* Внешний контейнер для HUD, создающий безопасные отступы под рамку */
+.hud_container {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 520px;
+  /* Ширина подгоняется под размер Canvas */
+  min-height: 35px;
+  z-index: 10;
+  box-sizing: border-box;
+}
+
+
+
+/* Базовый класс для всех элементов декора */
+.hud_decor {
+  position: absolute;
+  background-size: contain;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  /* Чтобы рамка не мешала кликам, если перекроет холст */
+  z-index: 11;
+}
+
+/* УГЛЫ (Размер подобран так, чтобы сохранить пропорции 1:1 картинок) */
+.decor_tl {
+  top: -6px;
+  left: -4px;
+  width: 45px;
+  height: 45px;
+  background-image: url('/hud/corner_tl.png');
+}
+
+.decor_tr {
+  top: -6px;
+  right: -4px;
+  width: 45px;
+  height: 45px;
+  background-image: url('/hud/corner_tr.png');
+}
+
+.decor_bl {
+  bottom: -28px;
+  left: -4px;
+  width: 45px;
+  height: 45px;
+  background-image: url('/hud/corner_bl.png');
+}
+
+.decor_br {
+  bottom: -28px;
+  right: -4px;
+  width: 45px;
+  height: 45px;
+  background-image: url('/hud/corner_br.png');
+}
+
+/* ЦЕНТРЫ (Горизонтальные панели, центрированные по осям) */
+.decor_ct {
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 160px;
+  height: 25px;
+  background-image: url('/hud/center_top.png');
+  background-position: center;
+}
+
+.decor_cb {
+  bottom: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 180px;
+  height: 35px;
+  background-image: url('/hud/center_bottom.png');
+  background-position: center;
+}
+
+
+.game {
+  position: relative;
+  /* Важно для перекрытия всего игрового блока и правого бара */
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  margin-top: 20px;
+  gap: 1px;
+}
+
+/* --- ЭКРАН GAME OVER (КОМПАКТНЫЙ ПОД МОБИЛКУ) --- */
+.gameover_overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 8, 14, 0.96);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 82, 82, 0.35);
+  animation: fadeInOverlay 0.3s ease-out;
+}
+
+.gameover_card {
+  width: 300px;
+  max-width: 94%;
+  background: linear-gradient(180deg, rgba(12, 20, 32, 0.98) 0%, rgba(6, 10, 16, 0.99) 100%);
+  border: 1px solid rgba(255, 82, 82, 0.4);
+  border-top: 2px solid #ff5252;
+  border-bottom: 2px solid #00e5ff;
+  border-radius: 3px;
+  padding: 14px 16px;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.95), inset 0 0 20px rgba(255, 82, 82, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.gameover_subtitle {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  color: #ff8a80;
+  margin-bottom: 2px;
+  text-align: center;
+}
+
+.gameover_title {
+  margin: 0 0 10px 0;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #ff5252;
+  text-shadow: 0 0 14px rgba(255, 82, 82, 0.65);
+}
+
+.gameover_total_box {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 229, 255, 0.05);
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  padding: 6px 12px;
+  border-radius: 2px;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+
+.gameover_total_label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #8093a6;
+  letter-spacing: 1px;
+}
+
+.gameover_total_value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 18px;
+  font-weight: 900;
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.gameover_stats_header {
+  width: 100%;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 8px;
+  font-weight: 700;
+  color: #647c94;
+  letter-spacing: 0.8px;
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+  border-bottom: 1px dashed rgba(0, 229, 255, 0.2);
+  text-align: left;
+}
+
+.gameover_list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.gameover_row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(4, 8, 14, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 3px 8px;
+  border-radius: 2px;
+}
+
+.gameover_enemy_info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.gameover_sprite_icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  background-size: 400% 200%;
+  background-position: 0% 0%;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 0 3px rgba(0, 229, 255, 0.35));
+}
+
+.gameover_enemy_name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #eceff1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gameover_dash {
+  color: #435261;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  margin: 0 6px;
+}
+
+.gameover_count {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #00e5ff;
+  min-width: 28px;
+  text-align: right;
+  text-shadow: 0 0 6px rgba(0, 229, 255, 0.4);
+}
+
+.gameover_restart_btn {
+  width: 100%;
+  padding: 9px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #ffffff;
+  background: linear-gradient(90deg, rgba(183, 28, 28, 0.4) 0%, rgba(239, 83, 80, 0.85) 50%, rgba(183, 28, 28, 0.4) 100%);
+  border: 1px solid #ef5350;
+  border-radius: 2px;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: 0 0 15px rgba(239, 83, 80, 0.35);
+  transition: all 0.2s ease;
+}
+
+.gameover_restart_btn:hover {
+  filter: brightness(1.2);
+  box-shadow: 0 0 22px rgba(239, 83, 80, 0.6);
+}
+
+
+/* =========================================================
+   ВСТРОЕННЫЙ СКАНЕР ВОЛНЫ В ВЕРХНИЙ HUD И АККОРДЕОН ВРАГОВ
+   ========================================================= */
+
+
+
+/* Интерактивная кнопка статуса волны по центру HUD */
+.hud_wave_btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 229, 255, 0.06);
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  border-radius: 3px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 82, 82, 0.45);
+  background: rgba(255, 82, 82, 0.08);
+}
+
+.hud_wave_btn:hover,
+.hud_wave_btn[data-open="true"] {
+  background: rgba(0, 229, 255, 0.16);
+  border-color: #00e5ff;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
+}
+
+/* Мини-капсула со значком жука и стрелкой */
+.hud_radar_pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 5px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  color: #00e5ff;
+}
+
+.hud_radar_caret {
+  font-size: 7px;
+  opacity: 0.85;
+}
+
+/* Выпадающий блок со списком врагов прямо под HUD */
+.hud_intel_dropdown {
+  position: absolute;
+  top: calc(100% + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  max-height: 360px;
+  overflow-y: auto;
+  background: linear-gradient(180deg, rgba(10, 19, 30, 0.97) 0%, rgba(5, 10, 15, 0.99) 100%);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  border-top: 2px solid #00e5ff;
+  border-radius: 4px;
+  padding: 10px 12px;
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.92), inset 0 0 18px rgba(0, 229, 255, 0.08);
+  z-index: 30;
+  box-sizing: border-box;
+  animation: dropDownHud 0.2s ease-out;
+}
+
+.intel_header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: #00e5ff;
+  letter-spacing: 1px;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+  border-bottom: 1px dashed rgba(0, 229, 255, 0.25);
+}
+
+.intel_close_x {
+  background: transparent;
+  border: none;
+  color: #647c94;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.intel_close_x:hover {
+  color: #ff5252;
+}
+
+.intel_empty {
+  font-size: 11px;
+  color: #647c94;
+  text-align: center;
+  padding: 12px 4px;
+  line-height: 1.4;
+}
+
+.intel_list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* Карточка одного жука в аккордеоне */
+.intel_item {
+  background: rgba(4, 8, 14, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+
+.intel_item[data-expanded="true"] {
+  border-color: rgba(0, 229, 255, 0.45);
+}
+
+.intel_item_header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #eceff1;
+  text-align: left;
+}
+
+.intel_item_header:hover {
+  background: rgba(0, 229, 255, 0.06);
+}
+
+.intel_item_left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Вырезанный 1-й кадр жука из спрайт-листа 4x2 */
+.intel_sprite {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  background-size: 400% 200%;
+  background-position: 0% 0%;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 0 3px rgba(0, 229, 255, 0.3));
+}
+
+.intel_name {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.intel_arrow {
+  font-size: 9px;
+  color: #00e5ff;
+}
+
+/* Раскрытое тело аккордеона с характеристиками и описанием */
+.intel_accordion_body {
+  padding: 6px 8px 8px 8px;
+  background: rgba(0, 229, 255, 0.03);
+  border-top: 1px dashed rgba(0, 229, 255, 0.15);
+}
+
+.intel_mini_stats {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 9px;
+  color: #8093a6;
+  margin-bottom: 5px;
+}
+
+.intel_mini_stats b {
+  color: #ffd700;
+}
+
+.intel_desc {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.35;
+  color: #b0bec5;
+}
+
+@keyframes dropDownHud {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.hud_wave_btn_label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #ff5252;
+  text-shadow: 0 0 8px rgba(255, 82, 82, 0.55);
+}
