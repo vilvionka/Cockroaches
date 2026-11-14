@@ -70,10 +70,10 @@ export const TowerShop = () => {
                     <img
                       src={
                         tower.isAntenna
-                          ? `/antenna-${tower.type.replace('an', '')}.png` // Сконструирует /antenna-3.png, /antenna-4.png и т.д.
+                          ? `./antenna-${tower.type.replace('an', '')}.png` // Сконструирует /antenna-3.png, /antenna-4.png и т.д.
                           : tower.isRocketSilo
-                            ? '/tower_silo.png'
-                            : `/tower_${tower.type}.png`
+                            ? './tower_silo.png'
+                            : `./tower_${tower.type}.png`
                       }
 
                       alt={tower.name}
