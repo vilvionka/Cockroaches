@@ -3,12 +3,12 @@ import { useGameStore } from '../store/gameStore';
 import styles from '../App.module.css';
 
 const ENEMY_DISPLAY_LIST = [
-  { key: 'normal', label: 'Таракан', sprite: '/cockroach.png' },
-  { key: 'ant', label: 'Муравей', sprite: '/ant.png' },
-  { key: 'beetle', label: 'Жук-броненосец', sprite: '/beetle.png' },
-  { key: 'fly', label: 'Муха', sprite: '/fly.png' },
-  { key: 'rhino', label: 'Жук-олень', sprite: '/rhino.png' },
-  { key: 'boss', label: 'Матка', sprite: '/queen_cockroach.png' },
+  { key: 'normal', label: 'Таракан', sprite: './cockroach.png' },
+  { key: 'ant', label: 'Муравей', sprite: './ant.png' },
+  { key: 'beetle', label: 'Жук-броненосец', sprite: './beetle.png' },
+  { key: 'fly', label: 'Муха', sprite: './fly.png' },
+  { key: 'rhino', label: 'Жук-олень', sprite: './rhino.png' },
+  { key: 'boss', label: 'Матка', sprite: './queen_cockroach.png' },
 ];
 
 export const GameOverModal = () => {

@@ -668,21 +668,17 @@ export const drawParticles = (ctx, particles) => {
 };
 
 
-// --- ОТРИСОВКА НЕОНОВЫХ ПРЕРЫВИСТЫХ ЛИНИЙ СВЯЗИ С ГОЛУБЫМ СВЕЧЕНИЕМ ---
-export const drawNetworkLines = (ctx, networkGraph, buildPreview) => {
+// --- ОТРИСОВКА НЕОНОВЫХ ЛИНИЙ СВЯЗИ И ЗАМЕТНЫХ ЗОН ПОКРЫТИЯ ---
+export const drawNetworkLines = (ctx, networkGraph, buildPreview, selectedTowerType = null) => {
   if (!networkGraph) return;
 
-  // 1. Рисуем лазерные линии соединений между узлами
+  // 1. Лазерные линии соединений между узлами (оставляем без изменений)
   networkGraph.forEach(node => {
     if (node.parentId) {
       const parent = networkGraph.find(n => n.id === node.parentId);
       if (parent) {
-
-        // === СЛОЙ 1: МЯГКОЕ НЕОНОВОЕ СВЕЧЕНИЕ ПО БОКАМ (ПОДЛОЖКА) ===
         ctx.save();
-        ctx.lineWidth = 4; // Делаем подложку шире, чтобы она выступала по бокам
-
-        // Определяем цвет свечения: бирюзово-голубой для активной сети, красный — для оборванной
+        ctx.lineWidth = 4;
         if (node.isActive) {
           ctx.strokeStyle = 'rgba(0, 229, 255, 0.25)';
           ctx.shadowColor = '#00E5FF';
@@ -690,34 +686,18 @@ export const drawNetworkLines = (ctx, networkGraph, buildPreview) => {
           ctx.strokeStyle = 'rgba(255, 82, 82, 0.2)';
           ctx.shadowColor = '#FF5252';
         }
-
-        ctx.shadowBlur = 8; // Радиус Sci-Fi свечения
-
+        ctx.shadowBlur = 8;
         ctx.beginPath();
         ctx.moveTo(parent.x, parent.y);
         ctx.lineTo(node.x, node.y);
         ctx.stroke();
         ctx.restore();
 
-
-        // === СЛОЙ 2: ТОНКАЯ СЕРДЦЕВИНА (БЕЛАЯ ПРЕРЫВИСТАЯ ЛИНИЯ) ===
         ctx.save();
-        ctx.lineWidth = 1.2; // Тонкий лазерный луч по центру
-
-        if (node.isActive) {
-          ctx.strokeStyle = '#FFFFFF'; // Идеально белый цвет для рабочей сети
-        } else {
-          ctx.strokeStyle = '#FF8A80'; // Приглушенный красный для оборванной сети
-        }
-
-        // Настройка прерывистой Sci-Fi линии: 
-        // 6 пикселей длина белого штриха, 4 пикселя пустой зазор между ними
+        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = node.isActive ? '#FFFFFF' : '#FF8A80';
         ctx.setLineDash([6, 4]);
-
-        // Анимация движения пакетов данных (эффект "бегущего пунктира")
-        // Отрезаем миллисекунды текущего времени, чтобы пунктир плавно двигался вдоль лазера
         ctx.lineDashOffset = -Math.floor(Date.now() / 50) % 10;
-
         ctx.beginPath();
         ctx.moveTo(parent.x, parent.y);
         ctx.lineTo(node.x, node.y);
@@ -727,29 +707,45 @@ export const drawNetworkLines = (ctx, networkGraph, buildPreview) => {
     }
   });
 
-  // 2. Если игрок находится в режиме постройки (есть призрак башни) — подсвечиваем сферы покрытия
-  if (buildPreview) {
+  // 2. Показываем зоны покрытия сразу при выборе башни в магазине ИЛИ при перемещении призрака
+  const showNetworkZones = Boolean(buildPreview || (selectedTowerType && selectedTowerType !== 'silo'));
+
+  if (showNetworkZones) {
     ctx.save();
     networkGraph.forEach(node => {
-      if (node.id === 'base' || node.isAntenna) {
+      // Показываем зоны только от активных узлов (Базы и запитанных антенн)
+      if (node.isActive && (node.id === 'base' || node.isAntenna)) {
+        const hasFreeSlots = node.connectedIds.length < node.maxConnections;
+
         ctx.beginPath();
         ctx.arc(node.x, node.y, node.range, 0, Math.PI * 2);
 
-        if (node.connectedIds.length < node.maxConnections) {
-          ctx.fillStyle = 'rgba(0, 229, 255, 0.02)';
-          ctx.strokeStyle = 'rgba(0, 229, 255, 0.2)';
+        if (hasFreeSlots) {
+          // Свободные слоты есть: яркая бирюзовая зона с четким контуром и легким свечением
+          ctx.fillStyle = 'rgba(0, 229, 255, 0.11)';
+          ctx.strokeStyle = 'rgba(0, 229, 255, 0.75)';
+          ctx.shadowColor = 'rgba(0, 229, 255, 0.6)';
+          ctx.shadowBlur = 10;
+          ctx.lineWidth = 2;
+          ctx.setLineDash([10, 6]); // Крупный четкий пунктир
         } else {
-          ctx.fillStyle = 'rgba(255, 152, 0, 0.01)';
-          ctx.strokeStyle = 'rgba(255, 152, 0, 0.1)';
+          // Слоты заполнены: заметная янтарно-оранжевая зона
+          ctx.fillStyle = 'rgba(255, 152, 0, 0.08)';
+          ctx.strokeStyle = 'rgba(255, 152, 0, 0.55)';
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([5, 5]);
         }
+
         ctx.fill();
-        ctx.lineWidth = 1;
         ctx.stroke();
       }
     });
     ctx.restore();
   }
 };
+
 
 
 // Отрисовка бетонной площадки под супероружие

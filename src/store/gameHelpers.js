@@ -847,7 +847,7 @@ export const generateWaveBlueprint = (waveNumber, enemyTypes, roadPaths, current
 
     // Спрайт строится по твоему правилу: /queen_cockroach.png, /queen_ant.png и т.д.
     const fileSuffix = currentBossSpecies === 'normal' ? 'cockroach' : currentBossSpecies;
-    const bossSpritePath = `/queen_${fileSuffix}.png`;
+    const bossSpritePath = `./queen_${fileSuffix}.png`;
 
     blueprint.push({
       ...baseBossTemplate,
