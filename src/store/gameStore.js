@@ -157,7 +157,7 @@ export const useGameStore = create((set, get) => ({
       damage: 12,
       reward: 25,
       scoreReward: 10, // Обычный таракан — базовые 10 очков
-      spritePath: '/cockroach.png',
+      spritePath: './cockroach.png',
       bloodColor: '#ff1420',
       cols: 4,
       rows: 2,
@@ -179,7 +179,7 @@ export const useGameStore = create((set, get) => ({
       damage: 5,
       reward: 15,
       scoreReward: 5, // Мелкий быстрый муравей — 5 очков
-      spritePath: '/ant.png',
+      spritePath: './ant.png',
       bloodColor: '#0084ff',
       cols: 4,
       rows: 2,
@@ -200,7 +200,7 @@ export const useGameStore = create((set, get) => ({
       damage: 20,
       reward: 50,
       scoreReward: 25, // Толстый жук — 25 очков
-      spritePath: '/beetle.png',
+      spritePath: './beetle.png',
       bloodColor: '#99ff00',
       cols: 4,
       rows: 2,
@@ -222,7 +222,7 @@ export const useGameStore = create((set, get) => ({
       damage: 25,
       reward: 60,
       scoreReward: 45, // Бронированный жук-олень — 45 очков
-      spritePath: '/rhino.png',
+      spritePath: './rhino.png',
       bloodColor: '#ff0000',
       cols: 4,
       rows: 2,
@@ -243,7 +243,7 @@ export const useGameStore = create((set, get) => ({
       damage: 10,
       reward: 20,
       scoreReward: 15, // Шустрая муха — 15 очков
-      spritePath: '/fly.png',
+      spritePath: './fly.png',
       bloodColor: '#00e5ff',
       cols: 4,
       rows: 2,
