@@ -290,9 +290,9 @@ export const useGameStore = create((set, get) => ({
       name: 'Пулемет',
       cost: 100,
       range: 95,
-      damage: 550, // Среднее для совместимости
-      minDamage: 500,
-      maxDamage: 600,
+      damage: 55, // Среднее для совместимости
+      minDamage: 50,
+      maxDamage: 60,
       critChance: 0.08,     // 8% на 1 уровне
       critMultiplier: 1.5,  // 150% урона на 1 уровне
       fireRate: 20,
@@ -307,9 +307,9 @@ export const useGameStore = create((set, get) => ({
       name: 'Бомбарда',
       cost: 200,
       range: 85,
-      damage: 1850,
-      minDamage: 1750,
-      maxDamage: 1950,
+      damage: 185,
+      minDamage: 175,
+      maxDamage: 195,
       critChance: 0.08,     // 8% на 1 уровне
       critMultiplier: 1.5,  // 150% урона на 1 уровне
       fireRate: 45,
