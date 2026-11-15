@@ -143,6 +143,7 @@ export const useGameStore = create((set, get) => ({
     fly: 0,
     boss: 0
   },
+  isUserPaused: false,
 
 
   // Обновите объект enemyTypes, прописав цвета крови (bloodColor):
@@ -306,9 +307,9 @@ export const useGameStore = create((set, get) => ({
       name: 'Бомбарда',
       cost: 200,
       range: 85,
-      damage: 185,
-      minDamage: 175,
-      maxDamage: 195,
+      damage: 1850,
+      minDamage: 1750,
+      maxDamage: 1950,
       critChance: 0.08,     // 8% на 1 уровне
       critMultiplier: 1.5,  // 150% урона на 1 уровне
       fireRate: 45,
@@ -336,6 +337,21 @@ export const useGameStore = create((set, get) => ({
     an4: { type: 'an4', name: 'АН-4', cost: 180, range: 280, size: 50, isAntenna: true, maxConnections: 4, unlockWave: 2 },
     an5: { type: 'an5', name: 'АН-5', cost: 250, range: 310, size: 50, isAntenna: true, maxConnections: 5, unlockWave: 3 }
   },
+
+  togglePause: () => set((state) => {
+    if (state.gameOver || state.levelTransition) return {};
+    const nextPaused = !state.isUserPaused;
+
+    // Сообщаем Яндекс Играм о паузе или возобновлении геймплея
+    if (nextPaused) {
+      window.ysdk?.features?.GameplayAPI?.stop();
+    } else {
+      window.ysdk?.features?.GameplayAPI?.start();
+    }
+
+    return { isUserPaused: nextPaused };
+  }),
+
 
 
   // Автоматический генератор путей по матрице плиток
@@ -857,6 +873,7 @@ export const useGameStore = create((set, get) => ({
       enemies: [],
       spawnQueue: [],
       activeHoleIndex: null,
+      isUserPaused: false,
       waveActive: false,
       waveTimer: 900, // 15 секунд на развертывание
       levelTransition: false,
@@ -1000,6 +1017,7 @@ export const useGameStore = create((set, get) => ({
     waveActive: false,
     gameOver: false,
     score: 0,
+    isUserPaused: false,
     killedStats: { normal: 0, ant: 0, beetle: 0, rhino: 0, fly: 0, boss: 0 },
     scorches: [],
     gold: 150,
@@ -1026,7 +1044,7 @@ export const useGameStore = create((set, get) => ({
 
 
   updateGame: () => set((state) => {
-    if (state.gameOver || state.levelTransition) return {};
+    if (state.gameOver || state.levelTransition || state.isUserPaused) return {};
 
     const spawnData = helpers.handleSpawning(state);
 
@@ -1377,16 +1395,6 @@ export const useGameStore = create((set, get) => ({
 
       if (state.levelWaveNumber >= currentLvlConfig.maxWaves) {
         if (nextTransitionTimer === 0) {
-          combinedDamageTexts.push({
-            id: Math.random(),
-            x: 400,
-            y: 200,
-            text: "УРОВЕНЬ ЗАЧИЩЕН! ПОДГОТОВКА ОТЧЕТА",
-            color: '#4CAF50',
-            alpha: 1,
-            timer: 180
-          });
-
           nextTransitionTimer = 300;
         }
 
@@ -1436,7 +1444,11 @@ export const useGameStore = create((set, get) => ({
           killedStats: nextKilledStats,
           damageTexts: [],
           droppedItems: [],
-          transitionDelayTimer: 0
+          transitionDelayTimer: 0,
+          selectedTowerId: null,   // Автоматом закрываем меню апгрейда башни
+          selectedTowerType: null, // Сбрасываем выбранную в магазине башню
+          buildPreview: null,      // Убираем призрак постройки
+          isAimingRocket: false
         };
       } else {
         waveActive = false;

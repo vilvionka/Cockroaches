@@ -569,16 +569,7 @@ export const updateBulletsAndCollisions = (
               });
             }
 
-            // Красивая надпись
-            newDamageTexts.push({
-              id: Math.random(),
-              x: enemy.x,
-              y: enemy.y - 35,
-              text: "МАТКА УНИЧТОЖЕНА: ПРОРЫВ СЛЕДУЮЩЕГО ПОКОЛЕНИЯ! 🪳🪳",
-              color: '#FF5252',
-              alpha: 1,
-              timer: 70
-            });
+
           }
 
           // 💰 РЕАНИМАЦИЯ И ПОЛНОЕ ВОССТАНОВЛЕНИЕ ВЫПАДЕНИЯ БОНУСОВ И МОНЕТ

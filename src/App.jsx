@@ -7,6 +7,7 @@ import { TowerShop } from './components/TowerShop';
 import { TowerControls } from './components/TowerControls';
 import { GameOverModal } from './components/GameOverModal';
 import { StartScreen } from './components/StartScreen';
+import { LevelCompleteModal } from './components/LevelCompleteModal';
 import styles from './App.module.css';
 
 function App() {
@@ -33,9 +34,9 @@ function App() {
         <GameOverModal />
         {/* Игровая зона с холстом и верхним HUD поверх него */}
         <div className={styles.canvas_container}>
-          <TopHud />
-
           <GameCanvas isPaused={!gameStarted} />
+          <TopHud />
+          <LevelCompleteModal />
         </div>
 
         {/* Правая панель магазина и апгрейдов */}

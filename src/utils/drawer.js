@@ -422,34 +422,7 @@ export const drawRoadHole = (ctx, activeHoleIndex, roadPaths, activeHolePathInde
   ctx.restore();
 };
 
-// Рисуем экран заставки между уровнями
-export const drawLevelTransition = (ctx, canvas, nextIncomingLevel) => {
-  // Затемняем экран стильным темно-бордовым цветом
-  ctx.fillStyle = 'rgba(40, 24, 21, 0.85)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.textAlign = 'center';
-
-  // 1. Поздравление
-  ctx.fillStyle = '#4CAF50';
-  ctx.font = 'bold 24px "Montserrat"';
-  ctx.fillText('УРОВЕНЬ УСПЕШНО ПРОЙДЕН!', canvas.width / 2, canvas.height / 2 - 80);
-
-  // 2. Награда
-  ctx.fillStyle = '#FFD700';
-  ctx.font = '20px "Montserrat"';
-  ctx.fillText('Получена награда: +150 золота', canvas.width / 2, canvas.height / 2 - 40);
-
-  // 3. Анонс следующего уровня
-  ctx.fillStyle = '#FFFFFF';
-  ctx.font = 'bold 36px "Montserrat"';
-  ctx.fillText(`ГОТОВ К УРОВНЮ ${nextIncomingLevel}? `, canvas.width / 2, canvas.height / 2 + 20);
-
-  // 4. Подсказка под кнопкой
-  ctx.fillStyle = '#B0BEC5';
-  ctx.font = 'italic 16px "Montserrat"';
-  ctx.fillText('Нажмите кнопку «Начать» в меню справа, чтобы продолжить бой', canvas.width / 2, canvas.height / 2 + 80);
-};
 
 // --- ОТРИСОВКА МОБИЛЬНОГО ПРИЗРАКА БАШНИ И РАДИУСА ---
 export const drawBuildPreview = (ctx, preview, assets) => {

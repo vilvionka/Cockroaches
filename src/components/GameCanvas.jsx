@@ -208,9 +208,7 @@ export const GameCanvas = ({ isPaused }) => {
 
         drawer.drawUI(ctx, canvas, storeState.waveActive, storeState.waveTimer, storeState.gameOver);
 
-        if (storeState.levelTransition) {
-          drawer.drawLevelTransition(ctx, canvas, storeState.nextIncomingLevel);
-        }
+
 
         animationFrameId = requestAnimationFrame(render);
       };
@@ -239,9 +237,10 @@ export const GameCanvas = ({ isPaused }) => {
         onMouseLeave={handleMouseLeave}
         style={{
           border: '1px solid #3e2723',
-          borderRadius: '4px',
+          borderRadius: '3px 0 0 3px', // Скругление только слева, справа углы прямые
           boxShadow: '0 10px 20px rgba(0,0,0,0.3)',
-          cursor: 'pointer'
+          cursor: isAimingRocket ? 'none' : 'pointer',
+          display: 'block'
         }}
       />
     </div>

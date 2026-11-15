@@ -5,6 +5,9 @@ import styles from '../App.module.css';
 export const GoldPanel = () => {
   const gold = useGameStore((state) => state.gold);
   const boostsInventory = useGameStore((state) => state.boostsInventory);
+  const selectedTowerId = useGameStore((state) => state.selectedTowerId);
+
+  if (selectedTowerId) return null;
 
   return (
     <div className={styles.bar_gold_panel}>
