@@ -1,17 +1,31 @@
 import React, { useEffect, useRef } from 'react';
 import { useGameStore } from '../store/gameStore';
-// 👈 ИСПРАВЛЯЕМ ЭТУ СТРОКУ (Добавляем импорт loadLevelDecor):
-import { loadAllAssets, loadLevelDecor, assets } from '../utils/assetLoader';
+import { preloadAllAssets, assets } from '../utils/assetLoader';
 import * as drawer from '../utils/drawer';
 import * as gameHelpers from '../store/gameHelpers';
-import { LEVELS_CONFIG } from '../store/gameStore'; // Также подтянем конфиг для безопасности
+import { LEVELS_CONFIG } from '../store/gameStore';
 
-
-export const GameCanvas = () => {
+export const GameCanvas = ({ isPaused }) => {
   const canvasRef = useRef(null);
+  const mousePosRef = useRef(null); // Храним координаты прицела
+
+  const isAimingRocket = useGameStore((state) => state.isAimingRocket);
   const buyAndPlaceTower = useGameStore((state) => state.buyAndPlaceTower);
-  const confirmPlacement = useGameStore((state) => state.confirmPlacement);
-  const cancelPlacement = useGameStore((state) => state.cancelPlacement);
+
+  // Обновляем позицию прицела при движении мыши
+  const handleMouseMove = (event) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    mousePosRef.current = {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top
+    };
+  };
+
+  const handleMouseLeave = () => {
+    mousePosRef.current = null;
+  };
 
   const handleCanvasClick = (event) => {
     const canvas = canvasRef.current;
@@ -20,12 +34,15 @@ export const GameCanvas = () => {
     const clickX = event.clientX - rect.left;
     const clickY = event.clientY - rect.top;
 
+    // Обновляем позицию (важно для тапов на мобильном экране, где нет наведения мышью)
+    mousePosRef.current = { x: clickX, y: clickY };
+
     const state = useGameStore.getState();
 
+    // --- РЕЖИМ НАВЕДЕНИЯ РАКЕТЫ ---
     if (state.isAimingRocket) {
       let hitRoad = false;
 
-      // ИСПРАВЛЕНО: Используем чистый gameHelpers, импортированный на самом верху файла
       for (let path of state.roadPaths) {
         if (gameHelpers.checkIsOnRoad(clickX, clickY, path)) {
           hitRoad = true;
@@ -36,10 +53,24 @@ export const GameCanvas = () => {
       if (hitRoad) {
         useGameStore.getState().launchRocket(clickX, clickY);
       } else {
-        // Если ткнули мимо дороги — сбрасываем режим, чтобы не блокировать интерфейс
-        useGameStore.setState({ isAimingRocket: false });
+        // Не сбрасываем прицел! Показываем предупреждение и даём кликнуть по дороге
+        useGameStore.setState({
+          damageTexts: [
+            ...state.damageTexts,
+            {
+              id: Math.random(),
+              x: clickX,
+              y: clickY - 22,
+              text: 'ЦЕЛЬ ВНЕ ДОРОГИ',
+              color: '#FF5252',
+              isAlert: true,
+              alpha: 1,
+              timer: 110
+            }
+          ]
+        });
       }
-      return; // Железно прерываем выполнение, чтобы клик не ушел под дорогу
+      return;
     }
 
     // ПРОВЕРКА: Тапнули ли по лежащему на земле предмету?
@@ -94,90 +125,107 @@ export const GameCanvas = () => {
     }
   };
 
+  // Храним актуальное значение паузы в ref, чтобы цикл requestAnimationFrame всегда видел свежее состояние
+  const isPausedRef = useRef(isPaused);
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     let animationFrameId;
+    let isCancelled = false;
 
-    // 1. Сначала загружаем общие ассеты игры (башни, пули, интерфейс)
-    loadAllAssets(() => {
+    preloadAllAssets().then(() => {
+      if (isCancelled) return;
+
       const currentLvl = useGameStore.getState().currentLevel;
+      useGameStore.setState({
+        decorations: LEVELS_CONFIG[currentLvl]?.decorations || []
+      });
 
-      // 2. Только после этого динамически подгружаем декорации текущего уровня
-      loadLevelDecor(currentLvl, () => {
+      const render = () => {
+        if (!isPausedRef.current) {
+          useGameStore.getState().updateGame();
+        }
 
-        // Переносим массив декораций из конфига в стейт игры
-        useGameStore.setState({
-          decorations: LEVELS_CONFIG[currentLvl]?.decorations || []
-        });
+        const storeState = useGameStore.getState();
 
-        // 3. Объявляем игровой цикл рендеринга
-        const render = () => {
-          const storeState = useGameStore.getState();
-          storeState.updateGame();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawer.drawBackground(ctx, canvas);
+        drawer.drawRoad(ctx, storeState.currentLevel);
+        drawer.drawDecorations(ctx, storeState.decorations);
+        drawer.drawScorches(ctx, storeState.scorches);
+        drawer.drawSlimeTrails(ctx, storeState.slimeTrails);
 
-          // Отрисовка окружения
-          drawer.drawBackground(ctx, canvas);
-          drawer.drawRoad(ctx, storeState.currentLevel);
-          drawer.drawDecorations(ctx, storeState.decorations);
+        const isSiloSelected = storeState.selectedTowerType === 'silo' || storeState.buildPreview?.type === 'silo';
+        drawer.drawRocketPad(ctx, storeState.currentLevel, isSiloSelected);
+        drawer.drawFlyingRockets(ctx, storeState.flyingRockets);
 
-          drawer.drawScorches(ctx, storeState.scorches);
+        const paths = storeState.roadPaths || [];
+        const firstPath = paths[0] || [];
+        const cakePoint = firstPath[firstPath.length - 1] || { x: 800, y: 270 };
 
-          drawer.drawSlimeTrails(ctx, storeState.slimeTrails);
 
-          drawer.drawRocketPad(ctx, storeState.currentLevel);
-          drawer.drawFlyingRockets(ctx, storeState.flyingRockets);
 
-          const paths = storeState.roadPaths || [];
-          const firstPath = paths[0] || [];
-          const cakePoint = firstPath[firstPath.length - 1] || { x: 800, y: 250 };
+        const graph = gameHelpers.calculateNetworkGraph(storeState.towers, cakePoint, storeState.towerTypes);
+        const baseNode = graph.find(n => n.id === 'base');
+        const baseConnectionsCount = baseNode ? baseNode.connectedIds.length : 0;
 
-          const graph = gameHelpers.calculateNetworkGraph(storeState.towers, cakePoint, storeState.towerTypes);
+        drawer.drawNetworkLines(ctx, graph, storeState.buildPreview, storeState.selectedTowerType);
+        drawer.drawNetworkConnectionsHud(ctx, graph);
+        drawer.drawCake(ctx, cakePoint, storeState.cakeHp, storeState.maxCakeHp, assets, baseConnectionsCount);
+        drawer.drawBaseShield(ctx, cakePoint, storeState.shieldFlashTimer);
 
-          const baseNode = graph.find(n => n.id === 'base');
-          const baseConnectionsCount = baseNode ? baseNode.connectedIds.length : 0;
+        drawer.drawTowers(ctx, storeState.towers);
+        drawer.drawBuildPreview(ctx, storeState.buildPreview, assets);
+        drawer.drawDroppedItems(ctx, storeState.droppedItems);
+        drawer.drawParticles(ctx, storeState.particles);
 
-          drawer.drawNetworkLines(ctx, graph, storeState.buildPreview);
-
-          // 🔥 ДОБАВЛЯЕМ СЮДА: Отрисовка значков Wi-Fi и лимитов линий
-          drawer.drawNetworkConnectionsHud(ctx, graph);
-
-          drawer.drawCake(ctx, cakePoint, storeState.cakeHp, storeState.maxCakeHp, assets, baseConnectionsCount);
-
-          drawer.drawBaseShield(ctx, cakePoint, storeState.shieldFlashTimer);
-
-          // Оставшаяся отрисовка игровых элементов
-          drawer.drawTowers(ctx, storeState.towers);
-          drawer.drawBuildPreview(ctx, storeState.buildPreview, assets);
-          drawer.drawDroppedItems(ctx, storeState.droppedItems);
-          drawer.drawParticles(ctx, storeState.particles);
-
-          drawer.drawEnemies(ctx, storeState.enemies, storeState.roadPaths);
-          drawer.drawBullets(ctx, storeState.bullets);
-          drawer.drawExplosions(ctx, storeState.explosions);
-          drawer.drawDamageTexts(ctx, storeState.damageTexts);
-          drawer.drawUI(ctx, canvas, storeState.waveActive, storeState.waveTimer, storeState.gameOver);
-
-          if (storeState.levelTransition) {
-            drawer.drawLevelTransition(ctx, canvas, storeState.nextIncomingLevel);
+        drawer.drawEnemies(ctx, storeState.enemies, storeState.roadPaths);
+        drawer.drawBullets(ctx, storeState.bullets);
+        drawer.drawExplosions(ctx, storeState.explosions);
+        drawer.drawDamageTexts(ctx, storeState.damageTexts);
+        // Отрисовка голографического прицела ракеты
+        if (storeState.isAimingRocket && mousePosRef.current) {
+          let isValidRoad = false;
+          for (let path of storeState.roadPaths) {
+            if (gameHelpers.checkIsOnRoad(mousePosRef.current.x, mousePosRef.current.y, path)) {
+              isValidRoad = true;
+              break;
+            }
           }
 
-          // Циклически запрашиваем следующий кадр анимации
-          animationFrameId = requestAnimationFrame(render);
-        };
+          // Вычисляем актуальный радиус взрыва с учётом специализации шахты
+          const silo = storeState.towers.find(t => t.isRocketSilo);
+          const blastRadius = silo?.specialization === 'grad' ? Math.round(65 * 1.33) : 65;
 
-        // Запускаем цикл строго один раз после полной готовности декораций!
+          drawer.drawRocketAim(ctx, mousePosRef.current, isValidRoad, blastRadius);
+        }
+
+        drawer.drawUI(ctx, canvas, storeState.waveActive, storeState.waveTimer, storeState.gameOver);
+
+        if (storeState.levelTransition) {
+          drawer.drawLevelTransition(ctx, canvas, storeState.nextIncomingLevel);
+        }
+
         animationFrameId = requestAnimationFrame(render);
-      });
+      };
+
+      animationFrameId = requestAnimationFrame(render);
     });
 
     return () => {
+      isCancelled = true;
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
     };
   }, []);
+
+
+
 
 
   return (
@@ -187,6 +235,8 @@ export const GameCanvas = () => {
         width={800}
         height={600}
         onClick={handleCanvasClick}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
         style={{
           border: '1px solid #3e2723',
           borderRadius: '4px',

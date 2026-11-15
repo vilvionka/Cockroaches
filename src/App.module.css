@@ -1291,3 +1291,172 @@
   color: #ff5252;
   text-shadow: 0 0 8px rgba(255, 82, 82, 0.55);
 }
+
+
+/* =========================================================
+   СТАРТОВЫЙ ЭКРАН И ПОЛОСА ПРЕДЗАГРУЗКИ (ЯНДЕКС ИГРЫ)
+   ========================================================= */
+
+.start_overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 42px;
+  background-color: #050911;
+  overflow: hidden;
+  user-select: none;
+}
+
+.start_poster_bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transform: scale(1.02);
+  animation: posterSlowZoom 14s ease-in-out infinite alternate;
+}
+
+/* Мягкое затемнение по краям и снизу, чтобы кнопка и полоса загрузки читались идеально */
+.start_vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(5, 10, 18, 0.15) 0%, rgba(4, 8, 14, 0.85) 100%),
+    linear-gradient(180deg, rgba(4, 8, 14, 0.35) 0%, rgba(4, 8, 14, 0.1) 45%, rgba(4, 8, 14, 0.96) 100%);
+}
+
+.start_content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 360px;
+  max-width: 90%;
+}
+
+.start_badge {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  color: #00e5ff;
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.8);
+  margin-bottom: 16px;
+}
+
+.start_title {
+  text-transform: uppercase;
+  margin: 0 0 22px 0;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 38px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: #ffffff;
+  text-align: center;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.9), 0 0 25px rgba(0, 229, 255, 0.5);
+}
+
+/* Полоса загрузки */
+.loader_box {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.loader_text {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #b0bec5;
+  letter-spacing: 1px;
+}
+
+.loader_text span {
+  color: #00e5ff;
+}
+
+.loader_bar_bg {
+  width: 100%;
+  height: 10px;
+  background: rgba(10, 19, 30, 0.9);
+  border: 1px solid rgba(0, 229, 255, 0.45);
+  border-radius: 3px;
+  padding: 2px;
+  box-sizing: border-box;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
+}
+
+.loader_bar_fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0091ea 0%, #00e5ff 100%);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.8);
+  border-radius: 1px;
+  transition: width 0.15s ease-out;
+}
+
+/* Кнопка старта после 100% загрузки */
+.start_actions {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.start_play_btn {
+  width: 160px;
+  padding: 12px 12px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #ffffff;
+  background: linear-gradient(90deg, rgba(0, 145, 234, 0.45) 0%, rgba(0, 229, 255, 0.85) 50%, rgba(0, 145, 234, 0.45) 100%);
+  border: 1px solid #00e5ff;
+  border-radius: 3px;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: 0 0 25px rgba(0, 229, 255, 0.45);
+  animation: pulseStartBtn 2s infinite ease-in-out;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.start_play_btn:hover {
+  filter: brightness(1.2);
+  transform: scale(1.03);
+}
+
+.start_play_btn:active {
+  transform: scale(0.98);
+}
+
+@keyframes posterSlowZoom {
+  from {
+    transform: scale(1.0);
+  }
+
+  to {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes pulseStartBtn {
+
+  0%,
+  100% {
+    box-shadow: 0 0 18px rgba(0, 229, 255, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 32px rgba(0, 229, 255, 0.8);
+  }
+}

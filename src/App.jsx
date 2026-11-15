@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { GameCanvas } from './components/GameCanvas';
 import { useGameStore } from './store/gameStore';
 import { TopHud } from './components/TopHud';
@@ -6,6 +6,7 @@ import { GoldPanel } from './components/GoldPanel';
 import { TowerShop } from './components/TowerShop';
 import { TowerControls } from './components/TowerControls';
 import { GameOverModal } from './components/GameOverModal';
+import { StartScreen } from './components/StartScreen';
 import styles from './App.module.css';
 
 function App() {
@@ -21,15 +22,20 @@ function App() {
   const restartGame = useGameStore((state) => state.restartGame);
   const nextLevel = useGameStore((state) => state.nextLevel);
 
+  const [gameStarted, setGameStarted] = useState(false);
+
   return (
     <div className={styles.wrap}>
       <div className={styles.game}>
+        {!gameStarted && (
+          <StartScreen onStartGame={() => setGameStarted(true)} />
+        )}
         <GameOverModal />
         {/* Игровая зона с холстом и верхним HUD поверх него */}
         <div className={styles.canvas_container}>
           <TopHud />
 
-          <GameCanvas />
+          <GameCanvas isPaused={!gameStarted} />
         </div>
 
         {/* Правая панель магазина и апгрейдов */}

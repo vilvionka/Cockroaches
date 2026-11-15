@@ -1,118 +1,144 @@
-// Объект, где хранятся все загруженные картинки игры
 export const assets = {
+  poster: { img: new Image(), loaded: false },
   bg: { img: new Image(), loaded: false },
   base: { img: new Image(), loaded: false },
+  scorchCrater: { img: new Image(), loaded: false },
   silo_rocket: { img: new Image(), loaded: false },
-  towers: {}, // ИСПРАВЛЕНИЕ: теперь здесь объект для разных видов башен
-  sprites: {},
-  explosions: {},
   roadStraight: { img: new Image(), loaded: false },
   roadCorner: { img: new Image(), loaded: false },
   roadTJunction: { img: new Image(), loaded: false },
-  decor: {},
-  scorchCrater: { img: new Image(), loaded: false },
+  towers: {},
+  sprites: {},
+  explosions: {},
+  decor: {}
 };
-
-
-
-
-const bugTypes = ['normal', 'ant', 'beetle', 'rhino', 'fly'];
-const combatTowerTypes = ['gun', 'bomb', 'frost'];
-const antennaTypes = ['an3', 'an4', 'an5'];
-
 
 export const loadLevelDecor = (levelNum, onComplete) => {
-  assets.decor['obj1'] = { img: new Image(), loaded: false };
-  assets.decor['obj2'] = { img: new Image(), loaded: false };
+  const obj1 = new Image();
+  const obj2 = new Image();
+  assets.decor.obj1 = { img: obj1, loaded: false };
+  assets.decor.obj2 = { img: obj2, loaded: false };
 
-  let loaded = 0;
-  const check = () => {
-    loaded++;
-    if (loaded === 2 && onComplete) onComplete();
+  let doneCount = 0;
+  const checkDone = () => {
+    doneCount += 1;
+    if (doneCount >= 2 && onComplete) onComplete();
   };
 
-  assets.decor['obj1'].img.src = `./decor/level${levelNum}_obj1.png`;
-  assets.decor['obj1'].img.onload = () => { assets.decor['obj1'].loaded = true; check(); };
-  assets.decor['obj1'].img.onerror = check;
+  obj1.onload = () => { assets.decor.obj1.loaded = true; checkDone(); };
+  obj1.onerror = () => { checkDone(); };
 
-  assets.decor['obj2'].img.src = `./decor/level${levelNum}_obj2.png`;
-  assets.decor['obj2'].img.onload = () => { assets.decor['obj2'].loaded = true; check(); };
-  assets.decor['obj2'].img.onerror = check;
+  obj2.onload = () => { assets.decor.obj2.loaded = true; checkDone(); };
+  obj2.onerror = () => { checkDone(); };
+
+  obj1.src = `./decor/level${levelNum}_obj1.png`;
+  obj2.src = `./decor/level${levelNum}_obj2.png`;
 };
 
+let preloadPromise = null;
 
-export const loadAllAssets = (onComplete) => {
-  let totalImages = 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + combatTowerTypes.length + 1 + (bugTypes.length * 3); // +1 для общей antenna.png
-  let loadedCount = 0;
+export const preloadAllAssets = (onProgress) => {
+  if (preloadPromise) {
+    preloadPromise.then(() => {
+      if (onProgress) onProgress(100);
+    });
+    return preloadPromise;
+  }
 
-  const checkProgress = () => {
-    loadedCount++;
-    if (loadedCount === totalImages && onComplete) {
-      onComplete(); // Сработает строго тогда, когда загрузится абсолютно всё
-    }
-  };
+  preloadPromise = new Promise((resolve) => {
+    const queue = [];
 
+    const register = (targetObj, src) => {
+      queue.push({ targetObj, src });
+    };
 
+    register(assets.poster, './poster.jpg');
+    register(assets.bg, './bg.jpg');
+    register(assets.base, './base.png');
+    register(assets.scorchCrater, './scorch_crater.png');
+    register(assets.silo_rocket, './silo_rocket.png');
+    register(assets.roadStraight, './road_straight.png');
+    register(assets.roadCorner, './road_corner.png');
+    register(assets.roadTJunction, './road_t_junction.png');
 
+    ['gun', 'bomb', 'frost'].forEach((type) => {
+      assets.towers[type] = { img: new Image(), loaded: false };
+      register(assets.towers[type], `./tower_${type}.png`);
+    });
 
-  // ИСПРАВЛЕНИЕ: Функция объявлена в самом начале, теперь её можно безопасно вызывать ниже
-  const initImage = (obj, src) => {
-    if (!obj) return console.error(`Объект ассета не инициализирован для: ${src}`);
-    obj.img.src = src;
-    obj.img.onload = () => { obj.loaded = true; checkProgress(); };
-    obj.img.onerror = () => { console.error(`Ошибка загрузки ассета: ${src}`); checkProgress(); };
-  };
+    assets.towers.silo = { img: new Image(), loaded: false };
+    register(assets.towers.silo, './tower_silo.png');
 
+    [3, 4, 5].forEach((num) => {
+      const key = `an${num}`;
+      assets.towers[key] = { img: new Image(), loaded: false };
+      register(assets.towers[key], `./antenna-${num}.png`);
+    });
 
-  // 1. Загружаем фоны и текстуры среды
-  initImage(assets.bg, './bg.jpg');
+    const enemiesMap = {
+      normal: 'cockroach',
+      ant: 'ant',
+      beetle: 'beetle',
+      rhino: 'rhino',
+      fly: 'fly'
+    };
 
-  initImage(assets.scorchCrater, './scorch_crater.png');
-  // ДОБАВЛЕНО: Загрузка изображения вашей базы (положите файл base.png в папку public)
-  initImage(assets.base, './base.png');
-  initImage(assets.silo_rocket, './tower_silo.png');
-  assets.towers['silo'] = assets.silo_rocket;
+    Object.entries(enemiesMap).forEach(([key, file]) => {
+      assets.sprites[key] = { img: new Image(), loaded: false };
+      register(assets.sprites[key], `./${file}.png`);
 
-  // Внутри loadAllAssets в utils/assetLoader.js:
-  assets.explosions['hole_spawn'] = { img: new Image(), loaded: false };
-  assets.explosions['hole_loop'] = { img: new Image(), loaded: false }; // Оставляем этот же ключ для совместимости
+      const queenKey = `queen_${file}`;
+      assets.sprites[queenKey] = { img: new Image(), loaded: false };
+      register(assets.sprites[queenKey], `./queen_${file}.png`);
+    });
 
-  initImage(assets.explosions['hole_spawn'], './hole_spawn.png'); // Спрайт-лист зарождения (8 кадров)
-  initImage(assets.explosions['hole_loop'], './black_hole_photo.png'); // 👈 Твоё цельное красивое фото!
+    register(assets.explosions.hole_spawn = { img: new Image(), loaded: false }, './hole_spawn.png');
+    register(assets.explosions.hole_loop = { img: new Image(), loaded: false }, './black_hole_photo.png');
+    register(assets.explosions.bomb_blast = { img: new Image(), loaded: false }, './explosion_bomb.png');
 
+    Object.keys(enemiesMap).forEach((type) => {
+      assets.explosions[type] = { img: new Image(), loaded: false };
+      register(assets.explosions[type], `./explosion_${type}.png`);
+    });
 
-  initImage(assets.roadStraight, './road_straight.png');
-  initImage(assets.roadCorner, './road_corner.png');
-  initImage(assets.roadTJunction, './road_t_junction.png');
+    loadLevelDecor(1);
 
-  combatTowerTypes.forEach((type) => {
-    assets.towers[type] = { img: new Image(), loaded: false };
-    initImage(assets.towers[type], `./tower_${type}.png`);
+    const total = queue.length;
+    let loadedCount = 0;
+    let isResolved = false;
+
+    const finish = () => {
+      if (isResolved) return;
+      isResolved = true;
+      if (onProgress) onProgress(100);
+      resolve();
+    };
+
+    const handleStep = () => {
+      loadedCount += 1;
+      const percent = Math.min(100, Math.round((loadedCount / total) * 100));
+      if (onProgress) onProgress(percent);
+      if (loadedCount >= total) {
+        finish();
+      }
+    };
+
+    queue.forEach(({ targetObj, src }) => {
+      targetObj.img.onload = () => {
+        targetObj.loaded = true;
+        handleStep();
+      };
+      targetObj.img.onerror = () => {
+        handleStep();
+      };
+      targetObj.img.src = src;
+    });
+
+    // Страховочный таймер на случай зависания сети
+    setTimeout(finish, 5000);
   });
 
-  // Загружаем отдельные картинки для каждого типа антенн
-  antennaTypes.forEach((type) => {
-    // Переводим типы 'an3', 'an4', 'an5' в формат ваших названий файлов 'antenna-3', 'antenna-4', 'antenna-5'
-    const fileNumber = type.replace('an', '');
-
-    assets.towers[type] = { img: new Image(), loaded: false };
-    initImage(assets.towers[type], `./antenna-${fileNumber}.png`);
-  });
-
-  // 3. Загружаем спрайты жуков и их смертей
-  bugTypes.forEach((type) => {
-    assets.sprites[type] = { img: new Image(), loaded: false };
-    assets.explosions[type] = { img: new Image(), loaded: false };
-
-    const fileSuffix = type === 'normal' ? 'cockroach' : type;
-
-    initImage(assets.sprites[type], `./${fileSuffix}.png`);
-    initImage(assets.explosions[type], `./explosion_${type}.png`);
-
-    // 👇 ДОБАВЛЯЕМ: Загрузка картинок маток (сохраняем в новый ключ 'queen_' + тип)
-    assets.sprites[`queen_${type}`] = { img: new Image(), loaded: false };
-    initImage(assets.sprites[`queen_${type}`], `./queen_${fileSuffix}.png`);
-  });
-  assets.explosions['bomb_blast'] = { img: new Image(), loaded: false };
-  initImage(assets.explosions['bomb_blast'], './explosion_bomb.png');
+  return preloadPromise;
 };
+
+export const loadAllAssets = preloadAllAssets;

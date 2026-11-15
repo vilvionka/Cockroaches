@@ -15,6 +15,9 @@ export const TowerShop = () => {
   const selectTowerToBuild = useGameStore((state) => state.selectTowerToBuild);
   const setActiveTab = useGameStore((state) => state.setActiveTab);
 
+  const towers = useGameStore((state) => state.towers);
+  const hasSilo = towers.some((t) => t.isRocketSilo);
+
   return (
     <>
       {/* ТАБЫ МАГАЗИНА */}
@@ -55,7 +58,7 @@ export const TowerShop = () => {
               <button
                 key={tower.type}
                 onClick={() => selectTowerToBuild(tower.type)}
-                disabled={gold < tower.cost || gameOver || isLocked}
+                disabled={gold < tower.cost || gameOver || isLocked || (tower.isRocketSilo && hasSilo)}
                 className={styles.bar_button}
                 data-selected={isSelected}
                 data-locked={isLocked}
@@ -92,9 +95,12 @@ export const TowerShop = () => {
 
       {selectedTowerType && (
         <div className={styles.bar_info}>
-          ℹ️ Кликните по траве на поле, чтобы установить пушку!
+          {selectedTowerType === 'silo'
+            ? 'ℹ️ Подтвердите установку (✓) на подсвеченной стройплощадке!'
+            : 'ℹ️ Кликните рядом с дорогой, но не в плотную к соседней башне, чтобы установить пушку или антенну!'}
         </div>
       )}
+
     </>
   );
 };

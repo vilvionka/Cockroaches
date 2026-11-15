@@ -167,7 +167,7 @@ export const useGameStore = create((set, get) => ({
       animSpeed: 5,
       missChance: 0.03,      // 3% уклонения (кроме frost)
       ignoreFrostMiss: true,
-      name: 'Таракан',
+      name: 'Ксено-скаут',
       description: 'Базовый разведчик. Имеет 3% шанс уклониться от любых пуль, кроме ледяных снарядов Заморозки.'
     },
     ant: {
@@ -188,7 +188,7 @@ export const useGameStore = create((set, get) => ({
       imgHeight: 768,  // 👈 ПОМЕНЯТЬ ТУТ
       animSpeed: 3,
       missChance: 0.05,
-      name: 'Муравей',
+      name: 'Крио-стридер',
       description: 'Быстрый и мелкий. Передвигается группами, шанс уклонения от всех видов пуль — 5%.'
     },
     beetle: {
@@ -210,7 +210,7 @@ export const useGameStore = create((set, get) => ({
       animSpeed: 8,
       frameOffsetsX: [1.5, 0.5, 0, -1.5, 1.5, 0.5, 0, -1.5],
       missChance: 0.07,
-      name: 'Жук-броненосец',
+      name: 'Золотой панцирник',
       description: 'Тяжелый панцирь с большим запасом здоровья. Шанс уклонения от выстрелов — 7%.'
     },
     rhino: {
@@ -231,7 +231,7 @@ export const useGameStore = create((set, get) => ({
       imgHeight: 768,  // 👈 ПОМЕНЯТЬ ТУТ
       animSpeed: 5,
       missChance: 0,
-      name: 'Жук-олень',
+      name: 'Джаггернаут',
       description: 'Тяжелая броня полностью блокирует обычные пули Пулемета. Пробивается только ББ-патронами, Бомбардой, Заморозкой или ракетами.'
     },
     fly: {
@@ -254,8 +254,8 @@ export const useGameStore = create((set, get) => ({
       frameOffsetsX: [-2, -0.5, 0.5, 2, -2, -0.5, 0.5, 2],
       missChance: 0.06,      // 6% от всех пуль
       splashResist: 0.5,
-      name: 'Муха',
-      description: 'Высокая скорость полета. Шанс уклонения 6%, а также получает на 50% меньше урона от взрывов Бомбарды и ракет.'
+      name: 'Пиро-рейнджер',
+      description: 'Высокая скорость движения. Шанс уклонения 6%, а также получает на 50% меньше урона от взрывов Бомбарды и ракет.'
     },
     boss: {
       type: 'boss',
@@ -275,7 +275,7 @@ export const useGameStore = create((set, get) => ({
       imgHeight: 941,
       animSpeed: 5,
       missChance: 0.08,
-      name: 'Матка-прародительница',
+      name: 'Королева Улья',
       description: 'Огромный босс волны. Шанс уклонения от пуль — 8%. После уничтожения выпускает двух быстрых жуков своего вида.'
     }
   },
@@ -324,7 +324,7 @@ export const useGameStore = create((set, get) => ({
 
     silo: {
       type: 'silo',
-      name: 'Ракетная Шахта',
+      name: 'Ракетница',
       cost: 500,
       range: 9999,
       size: 60,
@@ -393,7 +393,50 @@ export const useGameStore = create((set, get) => ({
   },
 
 
-  selectTowerToBuild: (type) => set({ selectedTowerType: type }),
+  selectTowerToBuild: (type) => set((state) => {
+    // Повторный клик по уже выбранной башне, антенне или шахте — отменяет выбор и убирает призрака
+    if (state.selectedTowerType === type) {
+      return {
+        selectedTowerType: null,
+        buildPreview: null,
+        isAimingRocket: false
+      };
+    }
+
+    // Если выбрали Ракетную Шахту — сразу показываем её превью на стартовой площадке
+    if (type === 'silo') {
+      const hasSilo = state.towers.some(t => t.isRocketSilo);
+      if (hasSilo) return { selectedTowerType: null, buildPreview: null, isAimingRocket: false };
+
+      const towerData = state.towerTypes[type];
+      const pad = LEVELS_CONFIG[state.currentLevel]?.rocketPad;
+      if (!pad || !towerData) return { selectedTowerType: type, isAimingRocket: false };
+
+      return {
+        selectedTowerType: type,
+        selectedTowerId: null,
+        isAimingRocket: false,
+        buildPreview: {
+          type: type,
+          x: pad.x,
+          y: pad.y,
+          cost: towerData.cost,
+          range: towerData.range,
+          size: towerData.size
+        }
+      };
+    }
+
+    // Для остальных башен и антенн — обычный выбор
+    return {
+      selectedTowerType: type,
+      selectedTowerId: null,
+      buildPreview: null,
+      isAimingRocket: false
+    };
+  }),
+
+
 
   buyAndPlaceTower: (clickX, clickY) => set((state) => {
     const { selectedTowerType, towerTypes, gold, roadPaths } = state;
@@ -467,13 +510,15 @@ export const useGameStore = create((set, get) => ({
       state.damageTexts.push({
         id: Math.random(),
         x: buildPreview.x,
-        y: buildPreview.y - 25,
+        y: buildPreview.y - 28,
         text: text,
         color: '#FF5252',
+        isAlert: true, // Помечаем, что это системное предупреждение, а не урон
         alpha: 1,
-        timer: 75 // Текст висит чуть больше секунды
+        timer: 150     // 2.5 секунды (150 кадров при 60 FPS)
       });
     };
+
 
     // 1. ДЛЯ ВСЕХ, КРОМЕ РАКЕТЫ: Проверяем наличие связи с базой
     if (!towerData.isRocketSilo) {
@@ -1173,8 +1218,15 @@ export const useGameStore = create((set, get) => ({
 
     const incomingDamageTexts = combatData.damageTexts || [];
     const combinedDamageTexts = incomingDamageTexts.map((txt) => {
+      if (txt.isAlert) {
+        // Предупреждение поднимается очень плавно и начинает таять только в последние 40 кадров
+        const nextTimer = txt.timer - 1;
+        const nextAlpha = nextTimer < 40 ? nextTimer / 40 : 1;
+        return { ...txt, y: txt.y - 0.25, alpha: nextAlpha, timer: nextTimer };
+      }
       return { ...txt, y: txt.y - 0.8, alpha: txt.alpha - 0.03, timer: txt.timer - 1 };
     }).filter(txt => txt.timer > 0);
+
 
     const activeDroppedItems = (state.droppedItems || []).map(item => ({
       ...item,

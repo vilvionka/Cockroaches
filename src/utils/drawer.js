@@ -204,12 +204,16 @@ export const drawTowers = (ctx, towers) => {
 
 
 
-// --- ИСПРАВЛЕННАЯ ОТРИСОВКА ВРАГОВ С БЕЗОПАСНЫМИ ТЕНЯМИ ---
+// --- ИСПРАВЛЕННАЯ ОТРИСОВКА ВРАГОВ С БЕЗОПАСНЫМИ ТЕНЯМИ И Z-СОРТИРОВКОЙ ---
 export const drawEnemies = (ctx, enemies, roadPaths) => {
   const safeEnemies = enemies || [];
   const safePaths = roadPaths || [];
 
-  safeEnemies.forEach((enemy) => {
+  // Сортируем жуков по размеру от меньшего к большему:
+  // мелкие рисуются первыми (внизу), крупные — поверх них (сверху)
+  const sortedEnemies = [...safeEnemies].sort((a, b) => (a.size || 0) - (b.size || 0));
+
+  sortedEnemies.forEach((enemy) => {
     const currentPath = safePaths[enemy.assignedPathIndex || 0] || [];
     const targetIndex = enemy.currentPointIndex + 1;
     let currentAngle = anglesMap[enemy.id] || 0;
@@ -225,17 +229,21 @@ export const drawEnemies = (ctx, enemies, roadPaths) => {
     }
 
     const assetKey = enemy.type === 'boss' ? `queen_${enemy.bossSpeciesSource}` : enemy.type;
-    const spriteAsset = assets.sprites?.[assetKey];
+    const rawAsset = assets.sprites?.[assetKey];
+    const spriteAsset = rawAsset?.loaded
+      ? rawAsset
+      : enemy.type === 'boss'
+        ? (assets.sprites?.queen_cockroach?.loaded ? assets.sprites.queen_cockroach : assets.sprites?.queen_ant)
+        : rawAsset;
+
 
     // --- 1. БЕЗОПАСНЫЙ СЛОЙ ТЕНИ ЖУКА ---
     ctx.save();
-    // Сдвигаем тень лапок и тела чуть вправо и вниз по вектору света
     ctx.translate(enemy.x + 4, enemy.y + 5);
     ctx.rotate(currentAngle + Math.PI / 2);
 
-    // Вместо опасных режимов наложения просто рисуем темный силуэт жука
-    ctx.globalAlpha = 0.35; // Прозрачность тени
-    ctx.filter = 'brightness(0) blur(2px)'; // Превращает картинку в мягкий черный силуэт
+    ctx.globalAlpha = 0.35;
+    ctx.filter = 'brightness(0) blur(2px)';
 
     if (spriteAsset?.loaded) {
       const frameWidth = enemy.imgWidth / enemy.cols;
@@ -252,7 +260,7 @@ export const drawEnemies = (ctx, enemies, roadPaths) => {
       ctx.fillStyle = '#000000';
       ctx.fillRect(-enemy.size / 2, -enemy.size / 4, enemy.size, enemy.size / 2);
     }
-    ctx.restore(); // СБРАСЫВАЕМ фильтр яркости и прозрачность, возвращая Canvas в норму
+    ctx.restore();
 
     // --- 2. ОТРИСОВКА САМОГО ЖУКА (ПОВЕРХ ТЕНИ) ---
     ctx.save();
@@ -292,6 +300,7 @@ export const drawEnemies = (ctx, enemies, roadPaths) => {
     }
   });
 };
+
 
 
 
@@ -521,7 +530,9 @@ export const drawDamageTexts = (ctx, damageTexts) => {
     ctx.globalAlpha = Math.max(0, txt.alpha);
     ctx.fillStyle = txt.color;
 
-    if (txt.isCrit) {
+    if (txt.isAlert) {
+      ctx.font = 'bold 13px "Orbitron", Arial';
+    } else if (txt.isCrit) {
       ctx.font = 'bold 20px "Montserrat", Arial';
     } else if (txt.isMiss) {
       ctx.font = 'bold 12px "Orbitron", Arial';
@@ -530,11 +541,12 @@ export const drawDamageTexts = (ctx, damageTexts) => {
     }
 
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = txt.isCrit ? 4 : 3;
+    ctx.lineWidth = txt.isAlert || txt.isCrit ? 4 : 3;
     ctx.strokeText(txt.text, txt.x, txt.y);
 
     ctx.fillText(txt.text, txt.x, txt.y);
   });
+
 
   ctx.restore();
 };
@@ -748,19 +760,19 @@ export const drawNetworkLines = (ctx, networkGraph, buildPreview, selectedTowerT
 
 
 
-// Отрисовка бетонной площадки под супероружие
-export const drawRocketPad = (ctx, currentLevel) => {
-  const config = LEVELS_CONFIG[currentLevel]; // Подтяните конфиг уровней сверху
+// Отрисовка площадки под супероружие + целеуказатель при выборе в магазине
+export const drawRocketPad = (ctx, currentLevel, isSiloSelected = false) => {
+  const config = LEVELS_CONFIG[currentLevel];
   if (!config || !config.rocketPad) return;
 
   const pad = config.rocketPad;
 
+  // 1. Базовая площадка (позже здесь можно заменить на ctx.drawImage вашей картинки стройплощадки)
   ctx.save();
   ctx.lineWidth = 2;
   ctx.strokeStyle = 'rgba(0, 229, 255, 0.2)';
   ctx.fillStyle = 'rgba(20, 30, 40, 0.4)';
 
-  // Рисуем футуристичный знак площадки
   ctx.beginPath();
   ctx.arc(pad.x, pad.y, 30, 0, Math.PI * 2);
   ctx.fill();
@@ -772,7 +784,60 @@ export const drawRocketPad = (ctx, currentLevel) => {
   ctx.textBaseline = 'middle';
   ctx.fillText('LAUNCH PAD', pad.x, pad.y);
   ctx.restore();
+
+  // 2. ЯРКИЙ УКАЗАТЕЛЬ И ПУЛЬСАЦИЯ, КОГДА ВЫБРАНА РАКЕТНАЯ ШАХТА В МАГАЗИНЕ
+  if (isSiloSelected) {
+    ctx.save();
+
+    const pulse = Math.sin(Date.now() / 160); // Плавная синусоида от -1 до 1
+    const ringRadius = 36 + pulse * 4;
+    const bounceY = pulse * 5; // Амплитуда подпрыгивания стрелки (5 px)
+
+    // Пульсирующее неоновое кольцо вокруг площадки
+    ctx.beginPath();
+    ctx.arc(pad.x, pad.y, ringRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.85)';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = '#00E5FF';
+    ctx.shadowBlur = 14;
+    ctx.setLineDash([8, 4]);
+    ctx.stroke();
+
+    // Подпрыгивающая стрелка-указатель над площадкой
+    const arrowTipY = pad.y - 46 + bounceY;
+    const arrowTopY = arrowTipY - 18;
+
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#00E5FF';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+
+    // Рисуем стрелку вниз (хвостовик + треугольный наконечник)
+    ctx.beginPath();
+    ctx.moveTo(pad.x - 5, arrowTopY);
+    ctx.lineTo(pad.x + 5, arrowTopY);
+    ctx.lineTo(pad.x + 5, arrowTipY - 8);
+    ctx.lineTo(pad.x + 12, arrowTipY - 8);
+    ctx.lineTo(pad.x, arrowTipY);
+    ctx.lineTo(pad.x - 12, arrowTipY - 8);
+    ctx.lineTo(pad.x - 5, arrowTipY - 8);
+    ctx.closePath();
+
+    ctx.fill();
+    ctx.stroke();
+
+    // Подпись над стрелкой
+    ctx.font = 'bold 10px "Orbitron", Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.lineWidth = 3;
+    ctx.strokeText('СТРОЙПЛОЩАДКА', pad.x, arrowTopY - 4);
+    ctx.fillText('СТРОЙПЛОЩАДКА', pad.x, arrowTopY - 4);
+
+    ctx.restore();
+  }
 };
+
 
 
 export const drawFlyingRockets = (ctx, flyingRockets) => {
@@ -1057,5 +1122,79 @@ export const drawNetworkConnectionsHud = (ctx, networkGraph) => {
     ctx.restore();
   });
 };
+
+// --- ОТРИСОВКА ТАКТИЧЕСКОГО ПРИЦЕЛА ДЛЯ РАКЕТНОЙ ШАХТЫ ---
+export const drawRocketAim = (ctx, aimPos, isValidTarget, blastRadius = 65) => {
+  if (!aimPos) return;
+
+  const { x, y } = aimPos;
+  const color = isValidTarget ? '#00E5FF' : '#FF5252';
+  const fillBg = isValidTarget ? 'rgba(0, 229, 255, 0.12)' : 'rgba(255, 82, 82, 0.14)';
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  // 1. Зона будущего поражения (радиус взрыва)
+  ctx.beginPath();
+  ctx.arc(0, 0, blastRadius, 0, Math.PI * 2);
+  ctx.fillStyle = fillBg;
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8, 6]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 2. Вращающееся внутреннее кольцо прицела
+  const rot = (Date.now() / 600) % (Math.PI * 2);
+  ctx.save();
+  ctx.rotate(rot);
+  ctx.beginPath();
+  ctx.arc(0, 0, 18, 0, Math.PI * 2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // 4 тактические засечки по кругу
+  for (let i = 0; i < 4; i++) {
+    ctx.rotate(Math.PI / 2);
+    ctx.beginPath();
+    ctx.moveTo(14, 0);
+    ctx.lineTo(24, 0);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // 3. Перекрестие или знак запрета в центре
+  if (isValidTarget) {
+    // Центральная точка наведения
+    ctx.fillStyle = '#FF3D00';
+    ctx.beginPath();
+    ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    // Диагональная черта запрета поверх внутреннего круга
+    ctx.beginPath();
+    ctx.moveTo(-12, -12);
+    ctx.lineTo(12, 12);
+    ctx.strokeStyle = '#FF5252';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+  }
+
+  // 4. Подпись под прицелом
+  ctx.font = 'bold 10px "Orbitron", Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#000000';
+  const label = isValidTarget ? 'УДАР РАЗРЕШЁН' : 'ТОЛЬКО ПО ДОРОГЕ';
+  ctx.strokeText(label, 0, 28);
+  ctx.fillStyle = color;
+  ctx.fillText(label, 0, 28);
+
+  ctx.restore();
+};
+
 
 
