@@ -5,6 +5,41 @@ import { LEVELS_CONFIG } from './../store/gameStore';
 // Вспомогательный объект для сохранения углов поворота жуков
 const anglesMap = {};
 
+// --- КЕШ СТАТИЧНОЙ КАРТЫ (ФОН + ДОРОГА + ДЕКОРАЦИИ) ---
+let mapCacheCanvas = null;
+let cachedLevelKey = null;
+
+export const invalidateMapCache = () => {
+  cachedLevelKey = null;
+};
+
+export const drawCachedMap = (ctx, canvas, currentLevel, decorations) => {
+  const decorReady = Boolean(assets.decor?.obj1?.loaded) + '_' + Boolean(assets.decor?.obj2?.loaded);
+  const bgReady = Boolean(assets.bg?.loaded) + '_' + (assets.bg?.img?.src || '');
+  const roadReady = Boolean(assets.roadStraight?.loaded);
+  const cacheKey = `${currentLevel}_${bgReady}_${roadReady}_${decorReady}`;
+
+  if (!mapCacheCanvas) {
+    mapCacheCanvas = document.createElement('canvas');
+    mapCacheCanvas.width = canvas.width;
+    mapCacheCanvas.height = canvas.height;
+  }
+
+  if (cachedLevelKey !== cacheKey) {
+    const offCtx = mapCacheCanvas.getContext('2d');
+    offCtx.clearRect(0, 0, mapCacheCanvas.width, mapCacheCanvas.height);
+
+    drawBackground(offCtx, mapCacheCanvas);
+    drawRoad(offCtx, currentLevel);
+    drawDecorations(offCtx, decorations);
+
+    cachedLevelKey = cacheKey;
+  }
+
+  ctx.drawImage(mapCacheCanvas, 0, 0);
+};
+
+
 // Рисуем фон
 export const drawBackground = (ctx, canvas) => {
   if (assets.bg.loaded) {
@@ -121,16 +156,19 @@ export const drawTowers = (ctx, towers) => {
       ctx.restore();
     }
 
-    // --- 2. ОБЪЕМНАЯ ТЕНЬ ОТ БАШНИ (ИСПРАВЛЕНА И ИЗОЛИРОВАНА) ---
+    // --- 2. ЛЁГКАЯ ТЕНЬ ОТ БАШНИ (БЕЗ ctx.filter) ---
     ctx.save();
     ctx.beginPath();
-    // Смещаем тень чуть вправо (на 4px) и вниз (на 6px) относительно центра башни
-    ctx.arc(tower.x + 4, tower.y + 6, tower.size / 2.2, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'; // Полупрозрачный черный
-    // Применяем размытие только внутри этого изолированного слоя
-    ctx.filter = 'blur(3px)';
+    ctx.arc(tower.x + 1, tower.y + 1, tower.size / 2.1, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
     ctx.fill();
-    ctx.restore(); // ЖЕЛЕЗНО сбрасываем фильтр размытия blur для тени башни!
+
+    ctx.beginPath();
+    ctx.arc(tower.x + 1, tower.y + 1, tower.size / 2.4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+    ctx.fill();
+    ctx.restore();
+
 
     // --- 3. РАСЧЕТ ОТДАЧИ И ОТРИСОВКА СПРАЙТА БАШНИ ---
     ctx.save();
@@ -237,30 +275,22 @@ export const drawEnemies = (ctx, enemies, roadPaths) => {
         : rawAsset;
 
 
-    // --- 1. БЕЗОПАСНЫЙ СЛОЙ ТЕНИ ЖУКА ---
+    // --- 1. БЫСТРАЯ ТЕНЬ ЖУКА ОВАЛОМ (БЕЗ ctx.filter) ---
     ctx.save();
-    ctx.translate(enemy.x + 4, enemy.y + 5);
+    ctx.translate(enemy.x + 1, enemy.y + 2);
     ctx.rotate(currentAngle + Math.PI / 2);
 
-    ctx.globalAlpha = 0.35;
-    ctx.filter = 'brightness(0) blur(2px)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, enemy.size * 0.19, enemy.size * 0.19, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-    if (spriteAsset?.loaded) {
-      const frameWidth = enemy.imgWidth / enemy.cols;
-      const frameHeight = enemy.imgHeight / enemy.rows;
-      const colIndex = enemy.currentFrame % enemy.cols;
-      const rowIndex = Math.floor(enemy.currentFrame / enemy.cols);
-
-      ctx.drawImage(
-        spriteAsset.img,
-        colIndex * frameWidth, rowIndex * frameHeight, frameWidth, frameHeight,
-        -enemy.size / 2, -enemy.size / 2, enemy.size, enemy.size
-      );
-    } else {
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(-enemy.size / 2, -enemy.size / 4, enemy.size, enemy.size / 2);
-    }
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, enemy.size * 0.22, enemy.size * 0.24, 0, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
+
 
     // --- 2. ОТРИСОВКА САМОГО ЖУКА (ПОВЕРХ ТЕНИ) ---
     ctx.save();
@@ -595,8 +625,6 @@ export const drawParticles = (ctx, particles) => {
       ctx.fillStyle = p.color;
 
       // Добавляем неоновый ореол брызгам для Sci-Fi стиля
-      ctx.shadowColor = p.color;
-      ctx.shadowBlur = 4;
       ctx.fill();
     }
     else if (p.type === 'shell') {
@@ -739,24 +767,18 @@ export const drawRocketPad = (ctx, currentLevel, isSiloSelected = false) => {
   if (!config || !config.rocketPad) return;
 
   const pad = config.rocketPad;
+  const padSize = 70; // Размер картинки площадки в пикселях (можете подстроить под свой спрайт)
 
-  // 1. Базовая площадка (позже здесь можно заменить на ctx.drawImage вашей картинки стройплощадки)
-  ctx.save();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = 'rgba(0, 229, 255, 0.2)';
-  ctx.fillStyle = 'rgba(20, 30, 40, 0.4)';
-
-  ctx.beginPath();
-  ctx.arc(pad.x, pad.y, 30, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.font = 'bold 9px "Orbitron"';
-  ctx.fillStyle = 'rgba(0, 229, 255, 0.4)';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('LAUNCH PAD', pad.x, pad.y);
-  ctx.restore();
+  // 1. Отрисовка картинки стройплощадки вместо круга и надписи LAUNCH PAD
+  if (assets.rocketPad?.loaded) {
+    ctx.drawImage(
+      assets.rocketPad.img,
+      pad.x - padSize / 2,
+      pad.y - padSize / 2,
+      padSize,
+      padSize
+    );
+  }
 
   // 2. ЯРКИЙ УКАЗАТЕЛЬ И ПУЛЬСАЦИЯ, КОГДА ВЫБРАНА РАКЕТНАЯ ШАХТА В МАГАЗИНЕ
   if (isSiloSelected) {
@@ -910,25 +932,20 @@ export const drawScorches = (ctx, scorches) => {
   });
 };
 
-// --- ОПТИМИЗИРОВАННАЯ ОТРИСОВКА ЧЁТКИХ СЛЕДОВ ОТ ЛАПОК (БЕЗ ТОРМОЗОВ) ---
 export const drawSlimeTrails = (ctx, slimeTrails) => {
   if (!slimeTrails || slimeTrails.length === 0) return;
 
+  ctx.save();
   slimeTrails.forEach((trail) => {
-    ctx.save();
-
-    // Плавное растворение по времени жизни
     ctx.globalAlpha = (trail.timer / trail.maxTimer) * 0.5;
-
     ctx.fillStyle = trail.color;
     ctx.beginPath();
-    // Рисуем мини-точку лапки (чёткий ровный круг без размытия)
     ctx.arc(trail.x, trail.y, trail.size, 0, Math.PI * 2);
     ctx.fill();
-
-    ctx.restore();
   });
+  ctx.restore();
 };
+
 
 // --- ОТРИСОВКА МЕРЦАЮЩЕГО БИОПОЛЯ БАЗЫ (КОРРЕКЦИЯ ЦВЕТА И СДВИГА) ---
 export const drawBaseShield = (ctx, cakePoint, shieldFlashTimer) => {

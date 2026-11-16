@@ -83,7 +83,7 @@ export const TopHud = () => {
                 data-open={isIntelOpen}
                 title="Показать врагов текущей волны"
               >
-                <span className={styles.hud_wave_btn_label}>ВОЛНА</span>
+                <span className={styles.hud_wave_btn_label}>ВРАГИ</span>
                 <span className={styles.hud_radar_pill}>
                   {uniqueWaveEnemies.length}
                   <span className={styles.hud_radar_caret}>{isIntelOpen ? '▲' : '▼'}</span>

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import * as helpers from './gameHelpers';
 import { loadLevelDecor } from '../utils/assetLoader';
+import { saveProgress } from '../utils/storage';
+
 
 
 export const LEVELS_CONFIG = {
@@ -351,6 +353,25 @@ export const useGameStore = create((set, get) => ({
 
     return { isUserPaused: nextPaused };
   }),
+
+  applySavedLevel: (savedLevel, savedScore = 0) => set(() => {
+    const validLevel = LEVELS_CONFIG[savedLevel] ? savedLevel : 1;
+    loadLevelDecor(validLevel);
+    const calculatedGold = Math.min(600, validLevel * 150);
+
+    return {
+      currentLevel: validLevel,
+      levelWaveNumber: 0,
+      waveNumber: 0,
+      roadPaths: LEVELS_CONFIG[validLevel].paths,
+      gold: calculatedGold,
+      score: savedScore,
+      decorations: LEVELS_CONFIG[validLevel].decorations
+        ? JSON.parse(JSON.stringify(LEVELS_CONFIG[validLevel].decorations))
+        : []
+    };
+  }),
+
 
 
 
@@ -854,6 +875,7 @@ export const useGameStore = create((set, get) => ({
 
     if (!LEVELS_CONFIG[nextLvl]) {
       alert("ПОЗДРАВЛЯЕМ! ВЫ ПРОШЛИ ВСЮ ИГРУ!");
+      saveProgress(1, 0);
       return get().restartGame();
     }
 
@@ -1004,42 +1026,50 @@ export const useGameStore = create((set, get) => ({
   }),
 
 
-  restartGame: () => set({
-    currentLevel: 1,
-    levelWaveNumber: 0,
-    waveNumber: 0,
-    roadPaths: LEVELS_CONFIG[1].paths,
-    enemies: [],
-    spawnQueue: [],
-    spawnTimer: 0,
-    cakeHp: 100,
-    waveTimer: 900,
-    waveActive: false,
-    gameOver: false,
-    score: 0,
-    isUserPaused: false,
-    killedStats: { normal: 0, ant: 0, beetle: 0, rhino: 0, fly: 0, boss: 0 },
-    scorches: [],
-    gold: 150,
-    towers: [],
-    bullets: [],
-    explosions: [],
-    damageTexts: [],
-    slimeTrails: [],
-    particles: [],                                         // Очищаем кровь, гильзы и вспышки
-    droppedItems: [],                                      // Убираем выпавшие монеты и бусты с дороги
-    boostsInventory: { damage: 0, fireRate: 0, range: 0 }, // Обнуляем инвентарь бустов
-    flyingRockets: [],                                     // Убираем летящие ракеты
-    isAimingRocket: false,                                 // Сбрасываем прицел ракеты
-    shieldFlashTimer: 0,
-    activeHoleIndex: null,
-    levelTransition: false,
-    transitionDelayTimer: 0,
-    nextIncomingLevel: 2,
-    buildPreview: null,
-    selectedTowerType: null,
-    selectedTowerId: null,
-    decorations: LEVELS_CONFIG[1].decorations ? JSON.parse(JSON.stringify(LEVELS_CONFIG[1].decorations)) : []
+  restartGame: () => set((state) => {
+    const startLevel = LEVELS_CONFIG[state.currentLevel] ? state.currentLevel : 1;
+    loadLevelDecor(startLevel);
+    const calculatedGold = Math.min(600, startLevel * 150);
+
+    return {
+      currentLevel: startLevel,
+      levelWaveNumber: 0,
+      waveNumber: 0,
+      roadPaths: LEVELS_CONFIG[startLevel].paths,
+      enemies: [],
+      spawnQueue: [],
+      spawnTimer: 0,
+      cakeHp: 100,
+      waveTimer: 900,
+      waveActive: false,
+      gameOver: false,
+      score: 0,
+      isUserPaused: false,
+      killedStats: { normal: 0, ant: 0, beetle: 0, rhino: 0, fly: 0, boss: 0 },
+      scorches: [],
+      gold: calculatedGold,
+      towers: [],
+      bullets: [],
+      explosions: [],
+      damageTexts: [],
+      slimeTrails: [],
+      particles: [],
+      droppedItems: [],
+      boostsInventory: { damage: 0, fireRate: 0, range: 0 },
+      flyingRockets: [],
+      isAimingRocket: false,
+      shieldFlashTimer: 0,
+      activeHoleIndex: null,
+      levelTransition: false,
+      transitionDelayTimer: 0,
+      nextIncomingLevel: startLevel + 1,
+      buildPreview: null,
+      selectedTowerType: null,
+      selectedTowerId: null,
+      decorations: LEVELS_CONFIG[startLevel].decorations
+        ? JSON.parse(JSON.stringify(LEVELS_CONFIG[startLevel].decorations))
+        : []
+    };
   }),
 
 
@@ -1429,7 +1459,13 @@ export const useGameStore = create((set, get) => ({
           };
         }
 
-        // Таймер 5 секунд истек -> Переключаем уровень
+        const unlockedLevel = state.currentLevel + 1;
+        const finalBonusGold = combatData.gold + 200;
+
+        if (LEVELS_CONFIG[unlockedLevel]) {
+          saveProgress(unlockedLevel, nextScore);
+        }
+
         return {
           waveActive: false,
           enemies: [],
@@ -1438,18 +1474,19 @@ export const useGameStore = create((set, get) => ({
           explosions: nextExplosions.filter(e => e.id !== 'road_hole_effect'),
           activeHoleIndex: null,
           levelTransition: true,
-          nextIncomingLevel: state.currentLevel + 1,
-          gold: combatData.gold + 200,
+          nextIncomingLevel: unlockedLevel,
+          gold: finalBonusGold,
           score: nextScore,
           killedStats: nextKilledStats,
           damageTexts: [],
           droppedItems: [],
           transitionDelayTimer: 0,
-          selectedTowerId: null,   // Автоматом закрываем меню апгрейда башни
-          selectedTowerType: null, // Сбрасываем выбранную в магазине башню
-          buildPreview: null,      // Убираем призрак постройки
+          selectedTowerId: null,
+          selectedTowerType: null,
+          buildPreview: null,
           isAimingRocket: false
         };
+
       } else {
         waveActive = false;
         activeHoleIndex = null;

@@ -1,7 +1,10 @@
+import { invalidateMapCache } from './drawer';
+
 export const assets = {
   poster: { img: new Image(), loaded: false },
   bg: { img: new Image(), loaded: false },
   base: { img: new Image(), loaded: false },
+  rocketPad: { img: new Image(), loaded: false },
   scorchCrater: { img: new Image(), loaded: false },
   silo_rocket: { img: new Image(), loaded: false },
   roadStraight: { img: new Image(), loaded: false },
@@ -14,15 +17,36 @@ export const assets = {
 };
 
 export const loadLevelDecor = (levelNum, onComplete) => {
+  invalidateMapCache();
+
+  const bgImg = new Image();
   const obj1 = new Image();
   const obj2 = new Image();
+
+  assets.bg = { img: bgImg, loaded: false };
   assets.decor.obj1 = { img: obj1, loaded: false };
   assets.decor.obj2 = { img: obj2, loaded: false };
 
   let doneCount = 0;
   const checkDone = () => {
     doneCount += 1;
-    if (doneCount >= 2 && onComplete) onComplete();
+    if (doneCount >= 3) {
+      invalidateMapCache();
+      if (onComplete) onComplete();
+    }
+  };
+
+  bgImg.onload = () => {
+    assets.bg.loaded = true;
+    checkDone();
+  };
+  bgImg.onerror = () => {
+    // Запасной фолбэк на общий bg.jpg, если файла для уровня нет
+    if (!bgImg.src.endsWith('/bg.jpg')) {
+      bgImg.src = './bg.jpg';
+    } else {
+      checkDone();
+    }
   };
 
   obj1.onload = () => { assets.decor.obj1.loaded = true; checkDone(); };
@@ -31,9 +55,12 @@ export const loadLevelDecor = (levelNum, onComplete) => {
   obj2.onload = () => { assets.decor.obj2.loaded = true; checkDone(); };
   obj2.onerror = () => { checkDone(); };
 
+  bgImg.src = `./bg_level${levelNum}.jpg`;
   obj1.src = `./decor/level${levelNum}_obj1.png`;
   obj2.src = `./decor/level${levelNum}_obj2.png`;
 };
+
+
 
 let preloadPromise = null;
 
@@ -53,7 +80,6 @@ export const preloadAllAssets = (onProgress) => {
     };
 
     register(assets.poster, './poster.jpg');
-    register(assets.bg, './bg.jpg');
     register(assets.base, './base.png');
     register(assets.scorchCrater, './scorch_crater.png');
     register(assets.silo_rocket, './silo_rocket.png');
@@ -68,6 +94,8 @@ export const preloadAllAssets = (onProgress) => {
 
     assets.towers.silo = { img: new Image(), loaded: false };
     register(assets.towers.silo, './tower_silo.png');
+    register(assets.rocketPad, './rocket_pad.png');
+
 
     [3, 4, 5].forEach((num) => {
       const key = `an${num}`;

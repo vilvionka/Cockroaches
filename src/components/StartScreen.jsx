@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { preloadAllAssets } from '../utils/assetLoader';
+import { initPlayerStorage, loadProgress } from '../utils/storage';
+import { useGameStore } from '../store/gameStore';
 import styles from '../App.module.css';
 
 export const StartScreen = ({ onStartGame }) => {
@@ -10,20 +12,27 @@ export const StartScreen = ({ onStartGame }) => {
     let isMounted = true;
 
     const initGameAndAssets = async () => {
-      // 1. Запускаем предзагрузку всех картинок
+      // 1. Предзагружаем картинки
       await preloadAllAssets((percent) => {
         if (isMounted) setProgress(percent);
       });
 
-      // 2. Инициализируем Яндекс SDK (если запущено на платформе Яндекс Игр)
+      // 2. Инициализируем Яндекс SDK и профиль игрока
       if (window.YaGames) {
         try {
           const ysdk = await window.YaGames.init();
           window.ysdk = ysdk;
+          await initPlayerStorage(ysdk);
           ysdk.features.LoadingAPI?.ready();
         } catch (err) {
           console.warn('YaGames SDK init skipped:', err);
         }
+      }
+
+      // 3. Загружаем сохранённый уровень и применяем его в gameStore
+      const saved = await loadProgress();
+      if (saved.savedLevel > 1) {
+        useGameStore.getState().applySavedLevel(saved.savedLevel, saved.savedScore);
       }
 
       if (isMounted) {

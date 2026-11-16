@@ -5,14 +5,15 @@ import * as drawer from '../utils/drawer';
 import * as gameHelpers from '../store/gameHelpers';
 import { LEVELS_CONFIG } from '../store/gameStore';
 
+const FIXED_TIMESTEP = 1000 / 60; // Жёсткий шаг симуляции: 60 тиков в секунду (16.67 мс)
+
 export const GameCanvas = ({ isPaused }) => {
   const canvasRef = useRef(null);
-  const mousePosRef = useRef(null); // Храним координаты прицела
+  const mousePosRef = useRef(null);
 
   const isAimingRocket = useGameStore((state) => state.isAimingRocket);
   const buyAndPlaceTower = useGameStore((state) => state.buyAndPlaceTower);
 
-  // Обновляем позицию прицела при движении мыши
   const handleMouseMove = (event) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -34,7 +35,6 @@ export const GameCanvas = ({ isPaused }) => {
     const clickX = event.clientX - rect.left;
     const clickY = event.clientY - rect.top;
 
-    // Обновляем позицию (важно для тапов на мобильном экране, где нет наведения мышью)
     mousePosRef.current = { x: clickX, y: clickY };
 
     const state = useGameStore.getState();
@@ -53,7 +53,6 @@ export const GameCanvas = ({ isPaused }) => {
       if (hitRoad) {
         useGameStore.getState().launchRocket(clickX, clickY);
       } else {
-        // Не сбрасываем прицел! Показываем предупреждение и даём кликнуть по дороге
         useGameStore.setState({
           damageTexts: [
             ...state.damageTexts,
@@ -76,12 +75,12 @@ export const GameCanvas = ({ isPaused }) => {
     // ПРОВЕРКА: Тапнули ли по лежащему на земле предмету?
     const clickedItem = state.droppedItems.find((item) => {
       const dist = Math.sqrt((clickX - item.x) ** 2 + (clickY - item.y) ** 2);
-      return dist <= 22; // Повышенный радиус тапа для мобильных дисплеев
+      return dist <= 22;
     });
 
     if (clickedItem) {
       useGameStore.getState().collectItem(clickedItem.id);
-      return; // Прерываем клик, чтобы случайно не открыть меню под предметом
+      return;
     }
 
     // 1. Если на экране активен призрак постройки башни
@@ -105,7 +104,7 @@ export const GameCanvas = ({ isPaused }) => {
     // 2. ПРОВЕРКА: Кликнули ли по уже построенной башне?
     const clickedTower = state.towers.find((t) => {
       const dist = Math.sqrt((clickX - t.x) ** 2 + (clickY - t.y) ** 2);
-      return dist <= 25; // Радиус башни 25px (size 50)
+      return dist <= 25;
     });
 
     if (clickedTower) {
@@ -125,7 +124,6 @@ export const GameCanvas = ({ isPaused }) => {
     }
   };
 
-  // Храним актуальное значение паузы в ref, чтобы цикл requestAnimationFrame всегда видел свежее состояние
   const isPausedRef = useRef(isPaused);
   useEffect(() => {
     isPausedRef.current = isPaused;
@@ -138,6 +136,10 @@ export const GameCanvas = ({ isPaused }) => {
     let animationFrameId;
     let isCancelled = false;
 
+    // Переменные для независимого от FPS тайминга
+    let lastTime = performance.now();
+    let accumulator = 0;
+
     preloadAllAssets().then(() => {
       if (isCancelled) return;
 
@@ -146,18 +148,34 @@ export const GameCanvas = ({ isPaused }) => {
         decorations: LEVELS_CONFIG[currentLvl]?.decorations || []
       });
 
-      const render = () => {
+      lastTime = performance.now();
+
+      const render = (now) => {
+        const frameTime = now - lastTime;
+        lastTime = now;
+
+        // Ограничиваем максимальный скачок времени (100 мс), чтобы при сворачивании вкладки не было рывка
+        const clampedFrameTime = Math.min(frameTime, 100);
+
         if (!isPausedRef.current) {
-          useGameStore.getState().updateGame();
+          accumulator += clampedFrameTime;
+
+          // Выполняем ровно столько логических шагов, сколько прошло реального времени
+          while (accumulator >= FIXED_TIMESTEP) {
+            useGameStore.getState().updateGame();
+            accumulator -= FIXED_TIMESTEP;
+          }
+        } else {
+          accumulator = 0;
         }
 
         const storeState = useGameStore.getState();
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        drawer.drawBackground(ctx, canvas);
-        drawer.drawRoad(ctx, storeState.currentLevel);
-        drawer.drawDecorations(ctx, storeState.decorations);
+        // Отрисовка закешированной карты (фон + дорога + декор) одним вызовом
+        drawer.drawCachedMap(ctx, canvas, storeState.currentLevel, storeState.decorations);
+
         drawer.drawScorches(ctx, storeState.scorches);
         drawer.drawSlimeTrails(ctx, storeState.slimeTrails);
 
@@ -168,8 +186,6 @@ export const GameCanvas = ({ isPaused }) => {
         const paths = storeState.roadPaths || [];
         const firstPath = paths[0] || [];
         const cakePoint = firstPath[firstPath.length - 1] || { x: 800, y: 270 };
-
-
 
         const graph = gameHelpers.calculateNetworkGraph(storeState.towers, cakePoint, storeState.towerTypes);
         const baseNode = graph.find(n => n.id === 'base');
@@ -189,7 +205,7 @@ export const GameCanvas = ({ isPaused }) => {
         drawer.drawBullets(ctx, storeState.bullets);
         drawer.drawExplosions(ctx, storeState.explosions);
         drawer.drawDamageTexts(ctx, storeState.damageTexts);
-        // Отрисовка голографического прицела ракеты
+
         if (storeState.isAimingRocket && mousePosRef.current) {
           let isValidRoad = false;
           for (let path of storeState.roadPaths) {
@@ -199,7 +215,6 @@ export const GameCanvas = ({ isPaused }) => {
             }
           }
 
-          // Вычисляем актуальный радиус взрыва с учётом специализации шахты
           const silo = storeState.towers.find(t => t.isRocketSilo);
           const blastRadius = silo?.specialization === 'grad' ? Math.round(65 * 1.33) : 65;
 
@@ -207,8 +222,6 @@ export const GameCanvas = ({ isPaused }) => {
         }
 
         drawer.drawUI(ctx, canvas, storeState.waveActive, storeState.waveTimer, storeState.gameOver);
-
-
 
         animationFrameId = requestAnimationFrame(render);
       };
@@ -222,10 +235,6 @@ export const GameCanvas = ({ isPaused }) => {
     };
   }, []);
 
-
-
-
-
   return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: '0px' }}>
       <canvas
@@ -237,7 +246,7 @@ export const GameCanvas = ({ isPaused }) => {
         onMouseLeave={handleMouseLeave}
         style={{
           border: '1px solid #3e2723',
-          borderRadius: '3px 0 0 3px', // Скругление только слева, справа углы прямые
+          borderRadius: '3px 0 0 3px',
           boxShadow: '0 10px 20px rgba(0,0,0,0.3)',
           cursor: isAimingRocket ? 'none' : 'pointer',
           display: 'block'
