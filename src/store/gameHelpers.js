@@ -684,21 +684,25 @@ export const updateBulletsAndCollisions = (
             }
           }
 
-          // 💰 РЕАНИМАЦИЯ И ПОЛНОЕ ВОССТАНОВЛЕНИЕ ВЫПАДЕНИЯ БОНУСОВ И МОНЕТ
+          // 💰 ВЫПАДЕНИЕ БОНУСОВ И МОНЕТ (шанс плавно растёт с каждым уровнем)
           const waveDensity = enemies.length;
-          const dynamicDropChance = Math.max(0.05, 0.25 - (waveDensity * 0.007));
+          const levelDropBonus = (currentLevel - 1) * 0.04; // +4% к базовому шансу за каждый новый уровень
+          const dynamicDropChance = Math.max(0.06, (0.25 + levelDropBonus) - (waveDensity * 0.007));
 
           if (Math.random() < dynamicDropChance) {
             const rand = Math.random();
             let boostType = 'gold';
             let value = 50;
 
-            if (rand < 0.65) {
+            // На высоких уровнях чуть выше доля именно бустов (40% вместо 35%)
+            const goldThreshold = Math.max(0.55, 0.65 - (currentLevel - 1) * 0.02);
+            const maxBoostsOnGround = 3 + Math.floor((currentLevel - 1) / 2);
+
+            if (rand < goldThreshold) {
               boostType = 'gold';
               value = currentLevel === 1 ? 50 : currentLevel === 2 ? 100 : 150;
             } else {
-              // currentBoostsCount теперь считается верно на основе проброшенного седьмого аргумента!
-              if (currentBoostsCount < 3) {
+              if (currentBoostsCount < maxBoostsOnGround) {
                 const boostRand = Math.random();
                 if (boostRand < 0.34) boostType = 'damage';
                 else if (boostRand < 0.67) boostType = 'fireRate';
@@ -708,6 +712,7 @@ export const updateBulletsAndCollisions = (
                 value = 40;
               }
             }
+
 
             if ((enemy.type === 'beetle' || enemy.type === 'rhino') && boostType === 'gold') {
               value += 50;
@@ -940,7 +945,7 @@ export const generateWaveBlueprint = (waveNumber, enemyTypes, roadPaths, current
     });
   }
 
-  // Финальная волна уровня: добавляем Королеву Улья в конце потока без паузы
+  // Финальная волна уровня: вставляем Королеву Улья в толпу (на 78% от длины волны)
   if (levelWaveNumber === maxWaves - 1) {
     const baseBossTemplate = enemyTypes['boss'];
     const correspondingSpecies = enemyTypes[currentBossSpecies];
@@ -952,7 +957,10 @@ export const generateWaveBlueprint = (waveNumber, enemyTypes, roadPaths, current
     const fileSuffix = currentBossSpecies === 'normal' ? 'cockroach' : currentBossSpecies;
     const bossSpritePath = `./queen_${fileSuffix}.png`;
 
-    blueprint.push({
+    // Позиция в очереди спавна на отметке ~78% от всей волны
+    const insertIndex = Math.floor(blueprint.length * 0.78);
+
+    blueprint.splice(insertIndex, 0, {
       ...baseBossTemplate,
       speed: bossSpeed,
       hp: bossHp,
@@ -966,6 +974,7 @@ export const generateWaveBlueprint = (waveNumber, enemyTypes, roadPaths, current
       bossSpeciesSource: currentBossSpecies
     });
   }
+
 
   return { blueprint, holeIndex, holePathIndex };
 };

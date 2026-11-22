@@ -1,5 +1,6 @@
 import React from 'react';
 import { useGameStore, LEVELS_CONFIG } from '../store/gameStore';
+import { showFullscreenAd } from '../utils/yandexAds';
 import styles from '../App.module.css';
 
 export const LevelCompleteModal = () => {
@@ -12,6 +13,16 @@ export const LevelCompleteModal = () => {
   if (!levelTransition) return null;
 
   const isGameCompleted = !LEVELS_CONFIG[nextIncomingLevel];
+
+  const handleNextClick = () => {
+    if (isGameCompleted) {
+      nextLevel();
+      return;
+    }
+    showFullscreenAd(() => {
+      nextLevel();
+    });
+  };
 
   return (
     <div className={styles.lvl_complete_overlay}>
@@ -31,20 +42,14 @@ export const LevelCompleteModal = () => {
           <span className={styles.lvl_complete_val}>{score}</span>
         </div>
 
-        {isGameCompleted ? (
-          <button
-            type="button"
-            onClick={nextLevel}
-            className={styles.supply_claim_btn}
-            style={{ width: '100%', marginTop: '4px' }}
-          >
-            НАЧАТЬ НОВУЮ ИГРУ
-          </button>
-        ) : (
-          <div className={styles.lvl_complete_hint}>
-            Нажмите кнопку «Начать» на панели справа, чтобы продолжить
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={handleNextClick}
+          className={styles.supply_claim_btn}
+          style={{ width: '100%', marginTop: '4px' }}
+        >
+          {isGameCompleted ? 'НАЧАТЬ НОВУЮ ИГРУ' : 'ДАЛЕЕ'}
+        </button>
       </div>
     </div>
   );

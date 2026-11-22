@@ -1145,29 +1145,36 @@ export const useGameStore = create((set, get) => ({
     return {
       currentLevel: nextLvl,
       levelWaveNumber: 0,
-      roadPaths: LEVELS_CONFIG[nextLvl].paths, // 👈 Берем готовый чистый путь из конфига
+      roadPaths: LEVELS_CONFIG[nextLvl].paths,
       basePoint: LEVELS_CONFIG[nextLvl].basePoint,
-      towers: [], // Полная зачистка поля перед новым раундом
+      towers: [],
       bullets: [],
       enemies: [],
       spawnQueue: [],
       unlockedWeaponModal: unlockInfo,
-      isSupplyDropOpen: !unlockInfo,
-      emergencyStrikeUsed: false, isEmergencyAdOpen: false, emergencyTarget: null,
+      isSupplyDropOpen: !unlockInfo, // 👈 Оставляем ТОЛЬКО эту строку!
+      emergencyStrikeUsed: false,
+      isEmergencyAdOpen: false,
+      emergencyTarget: null,
       activeHoleIndex: null,
       isUserPaused: false,
       waveActive: false,
-      waveTimer: 900, // 15 секунд на развертывание
+      waveTimer: 900,
       levelTransition: false,
       transitionDelayTimer: 0,
       slimeTrails: [],
-      droppedItems: [], particles: [], flyingRockets: [],
+      droppedItems: [],
+      particles: [],
+      flyingRockets: [],
       scorches: [],
       bonusTowerLimits: { gun: 0, bomb: 0, frost: 0, mlrs: 0 },
-      gold: calculatedGold, // Сбрасываем и начисляем по новой формуле
-      decorations: LEVELS_CONFIG[nextLvl].decorations ? JSON.parse(JSON.stringify(LEVELS_CONFIG[nextLvl].decorations)) : [],
-      cakeHp: healedHp       // Записываем подлеченный торт
+      gold: calculatedGold,
+      decorations: LEVELS_CONFIG[nextLvl].decorations
+        ? JSON.parse(JSON.stringify(LEVELS_CONFIG[nextLvl].decorations))
+        : [],
+      cakeHp: healedHp
     };
+
   }),
 
 
@@ -1695,7 +1702,7 @@ export const useGameStore = create((set, get) => ({
 
       finalAliveEnemies.forEach((enemy) => {
         const d = Math.sqrt((enemy.x - basePt.x) ** 2 + (enemy.y - basePt.y) ** 2);
-        if (d <= 120 && d < minDist) {
+        if (d <= 170 && d < minDist) {
           minDist = d;
           closestThreat = enemy;
         }

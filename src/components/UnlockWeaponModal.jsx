@@ -57,7 +57,7 @@ export const UnlockWeaponModal = () => {
           className={styles.supply_claim_btn}
           style={{ width: '100%' }}
         >
-          ПРИНЯТЬ НА ВООРУЖЕНИЕ
+          ДАЛЕЕ
         </button>
       </div>
     </div>
