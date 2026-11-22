@@ -137,24 +137,40 @@ export const drawTowers = (ctx, towers) => {
     const isFocused = tower.id === selectedTowerId;
 
     // 1. Если по башне тапнули — подсвечиваем её радиус стрельбы
+    // 1. Если по башне тапнули — подсвечиваем её радиус стрельбы
     if (isFocused) {
       ctx.save();
-      ctx.beginPath();
 
-      // РАСЧЕТ БУСТА: Если активен буст дальности, увеличиваем визуальный радиус на 50%
       let visualRange = tower.range;
       if (tower.activeBoosts?.range > 0) {
         visualRange = Math.round(tower.range * 1.5);
       }
 
+      // Внешний радиус поражения
+      ctx.beginPath();
       ctx.arc(tower.x, tower.y, visualRange, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0, 229, 255, 0.05)';
+      ctx.fillStyle = 'rgba(0, 229, 255, 0.06)';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(0, 229, 255, 0.35)';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.45)';
+      ctx.lineWidth = 1.5;
       ctx.stroke();
+
+      // Если есть мёртвая зона (РСЗО) — рисуем внутренний запретный круг
+      if (tower.minRange) {
+        ctx.beginPath();
+        ctx.arc(tower.x, tower.y, tower.minRange, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 82, 82, 0.12)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 82, 82, 0.6)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([6, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
       ctx.restore();
     }
+
 
     if (tower.minRange) {
       ctx.beginPath();

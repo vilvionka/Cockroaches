@@ -1,5 +1,5 @@
 import React from 'react';
-import { useGameStore } from '../store/gameStore';
+import { useGameStore, getMaxTowerLimit } from '../store/gameStore';
 import styles from '../App.module.css';
 
 export const TowerShop = () => {
@@ -62,13 +62,14 @@ export const TowerShop = () => {
             const isLocked = currentLevel === 1 && nextGlobalWave < tower.unlockWave;
             const isSelected = selectedTowerType === tower.type;
 
-            // Расчёт лимита для башен с baseLimit
             const hasLimit = tower.baseLimit !== undefined;
-            const bonusLimit = bonusTowerLimits?.[tower.type] || 0;
-            const maxAllowed = hasLimit ? tower.baseLimit + (currentLevel - 1) + bonusLimit : Infinity;
+            const maxAllowed = hasLimit
+              ? getMaxTowerLimit(tower.type, currentLevel, bonusTowerLimits)
+              : Infinity;
             const builtCount = hasLimit ? towers.filter((t) => t.type === tower.type).length : 0;
             const remainingCount = hasLimit ? Math.max(0, maxAllowed - builtCount) : null;
             const isLimitReached = hasLimit && remainingCount <= 0;
+
 
             return (
               <button

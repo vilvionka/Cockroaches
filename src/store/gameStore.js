@@ -34,6 +34,22 @@ export const LEVEL_UNLOCK_INFO = {
   // Сюда позже легко добавите 4: { ... } и 5: { ... }
 };
 
+export const LEVEL_TOWER_LIMITS = {
+  1: { gun: 3, bomb: 4, frost: 2, mlrs: 0 },
+  2: { gun: 4, bomb: 4, frost: 2, mlrs: 0 },
+  3: { gun: 4, bomb: 5, frost: 2, mlrs: 2 },
+  4: { gun: 4, bomb: 5, frost: 2, mlrs: 3 },
+  5: { gun: 5, bomb: 6, frost: 3, mlrs: 3 } // Задел на 5-й уровень
+};
+
+export const getMaxTowerLimit = (towerType, currentLevel, bonusTowerLimits = {}) => {
+  const levelLimits = LEVEL_TOWER_LIMITS[currentLevel] || LEVEL_TOWER_LIMITS[4];
+  if (levelLimits[towerType] === undefined) return Infinity;
+  const bonus = bonusTowerLimits?.[towerType] || 0;
+  return levelLimits[towerType] + bonus;
+};
+
+
 
 
 
@@ -465,14 +481,14 @@ export const useGameStore = create((set, get) => ({
       fireRate: 45,
       size: 50,
       bulletType: 'splash',
-      splashRadius: 60,
-      splashDamage: 15,
+      splashRadius: 80,
+      splashDamage: 45,
       unlockWave: 2,
-      rotationSpeed: 0.02,
+      rotationSpeed: 0.025,
       isAntenna: false,
       baseLimit: 4
     },
-    frost: { type: 'frost', name: 'Заморозка', cost: 300, range: 70, damage: 3, fireRate: 30, size: 50, bulletType: 'frost', slowDuration: 120, slowFactor: 0.5, unlockWave: 3, rotationSpeed: 0.035, isAntenna: false, baseLimit: 3 },
+    frost: { type: 'frost', name: 'Заморозка', cost: 300, range: 100, damage: 30, fireRate: 40, size: 50, bulletType: 'frost', slowDuration: 120, slowFactor: 0.5, unlockWave: 3, rotationSpeed: 0.04, isAntenna: false, baseLimit: 3 },
 
     silo: {
       type: 'silo',
@@ -499,8 +515,8 @@ export const useGameStore = create((set, get) => ({
       fireRate: 150,       // Редкий залп (раз в 2.5 секунды)
       size: 52,
       bulletType: 'mlrs',
-      splashRadius: 45,
-      splashDamage: 20,
+      splashRadius: 65,
+      splashDamage: 190,
       unlockLevel: 3,      // Открывается с 3-го уровня
       unlockWave: 1,
       rotationSpeed: 0.025,
@@ -551,6 +567,12 @@ export const useGameStore = create((set, get) => ({
     } else if (reward.type === 'comboBomb') {
       nextBonusLimits[reward.tower] = (nextBonusLimits[reward.tower] || 0) + reward.amount;
       nextGold += reward.gold || 0;
+    }
+
+    if (reward.boosts) {
+      nextBoosts.damage += reward.boosts.damage || 0;
+      nextBoosts.fireRate += reward.boosts.fireRate || 0;
+      nextBoosts.range += reward.boosts.range || 0;
     }
 
     return {
@@ -655,14 +677,14 @@ export const useGameStore = create((set, get) => ({
 
     const towerData = state.towerTypes[type];
     if (towerData?.baseLimit !== undefined) {
-      const bonusLimit = state.bonusTowerLimits?.[type] || 0;
-      const maxAllowed = towerData.baseLimit + (state.currentLevel - 1) + bonusLimit;
+      const maxAllowed = getMaxTowerLimit(type, state.currentLevel, state.bonusTowerLimits);
 
       const builtCount = state.towers.filter((t) => t.type === type).length;
       if (builtCount >= maxAllowed) {
         return { selectedTowerType: null, buildPreview: null, isAimingRocket: false };
       }
     }
+
 
 
 
@@ -783,8 +805,7 @@ export const useGameStore = create((set, get) => ({
     };
 
     if (towerData.baseLimit !== undefined) {
-      const bonusLimit = state.bonusTowerLimits?.[buildPreview.type] || 0;
-      const maxAllowed = towerData.baseLimit + (currentLevel - 1) + bonusLimit;
+      const maxAllowed = getMaxTowerLimit(buildPreview.type, currentLevel, state.bonusTowerLimits);
 
       const builtCount = towers.filter((t) => t.type === buildPreview.type).length;
       if (builtCount >= maxAllowed) {
@@ -792,6 +813,7 @@ export const useGameStore = create((set, get) => ({
         return { buildPreview: null, selectedTowerType: null };
       }
     }
+
 
 
 
@@ -1132,8 +1154,10 @@ export const useGameStore = create((set, get) => ({
     if (!LEVELS_CONFIG[nextLvl]) {
       saveProgress(1, 0);
       set({ currentLevel: 1, savedScore: 0 });
-      return get().restartGame();
+      get().restartGame();
+      return {};
     }
+
 
     const unlockInfo = LEVEL_UNLOCK_INFO[nextLvl] || null;
     // Подгружаем декорации для нового уровня
@@ -1862,7 +1886,7 @@ export const useGameStore = create((set, get) => ({
 
     // Рассчитываем базовые характеристики на основе уровня
     const lvl = silo.level || 1;
-    let urok = 500 * Math.pow(1.2, lvl - 1);
+    let urok = 1000 * Math.pow(1.2, lvl - 1);
     let radius = 65;
     let baseSpeed = 3.5 + (lvl * 0.5);
 
@@ -1871,7 +1895,7 @@ export const useGameStore = create((set, get) => ({
       urok = urok * 1.5; // Ядерный удар: +50% к урону от 4 уровня
     } else if (silo.specialization === 'grad') {
       radius = radius * 1.33; // Град: +33% к радиусу поражения, урон как на 4 лвл
-      urok = 200 * Math.pow(1.2, 3);
+      urok = 1000 * Math.pow(1.2, 3);
     }
 
     // Рассчитываем время полета (до 5 секунд, то есть макс 300 кадров)

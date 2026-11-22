@@ -23,9 +23,14 @@ export const TowerControls = () => {
   const isAntenna = activeTower.isAntenna;
   const isStandardGun = !isRocket && !isAntenna;
 
-  // Математика урона ракеты (теперь выводится честно!)
-  let rocketDamage = Math.round(500 * Math.pow(1.2, currentLvl - 1));
-  if (activeTower.specialization === 'nuke') rocketDamage = Math.round(rocketDamage * 1.5);
+  // Математика урона ракеты
+  let rocketDamage = Math.round(1000 * Math.pow(1.2, currentLvl - 1));
+  if (activeTower.specialization === 'nuke') {
+    rocketDamage = Math.round(rocketDamage * 1.5);
+  } else if (activeTower.specialization === 'grad') {
+    rocketDamage = Math.round(1000 * Math.pow(1.2, 3));
+  }
+
 
   return (
     <div className={styles.upgrade_panel}>
@@ -197,6 +202,28 @@ export const TowerControls = () => {
               </button>
             </div>
           )}
+
+          {isRocket && (
+            <div className={styles.spec_buttons_row}>
+              <button
+                onClick={() => useGameStore.getState().specializeTower('nuke')}
+                disabled={gold < upgradePrice || gameOver}
+                className={styles.spec_select_btn}
+                style={{ borderColor: '#FF5252', color: '#FF5252' }}
+              >
+                ЯДЕРНЫЙ УДАР<br /><small>Урон взрыва +50%</small>
+              </button>
+              <button
+                onClick={() => useGameStore.getState().specializeTower('grad')}
+                disabled={gold < upgradePrice || gameOver}
+                className={styles.spec_select_btn}
+                style={{ borderColor: '#FFD700', color: '#FFD700' }}
+              >
+                РСЗО «ГРАД»<br /><small>Радиус взрыва +33%</small>
+              </button>
+            </div>
+          )}
+
 
         </div>
       ) : (

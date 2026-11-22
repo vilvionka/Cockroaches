@@ -29,66 +29,67 @@ const LOOT_POOL = [
     icon: '🛡️',
     title: '+20 ПРОЧНОСТИ БАЗЫ',
     desc: 'Усиление энергетического купола',
-    reward: { type: 'baseHp', amount: 20 }
+    reward: { type: 'baseHp', amount: 20, }
   },
 
-  // Редкие (фиолетовые)
+  // Редкие (фиолетовые) — везде + усилители
   {
     id: 'limit_gun',
     rarity: 'rare',
     rarityLabel: 'РЕДКИЙ КОНТРАКТ',
     icon: '🔫',
-    title: '+1 К ЛИМИТУ ПУЛЕМЁТОВ',
-    desc: 'Разрешение на доп. турель в этом секторе',
-    reward: { type: 'towerLimit', tower: 'gun', amount: 1 }
+    title: '+1 ПУЛЕМЁТ И УСИЛИТЕЛИ',
+    desc: '+1 к лимиту Пулемётов, +1 Урон (D) и +1 Скорость (F)',
+    reward: { type: 'towerLimit', tower: 'gun', amount: 1, boosts: { damage: 1, fireRate: 1, range: 0 } }
   },
   {
     id: 'limit_frost',
     rarity: 'rare',
     rarityLabel: 'РЕДКИЙ КОНТРАКТ',
     icon: '❄️',
-    title: '+1 К ЛИМИТУ ЗАМОРОЗКИ',
-    desc: 'Разрешение на доп. крио-установку',
-    reward: { type: 'towerLimit', tower: 'frost', amount: 1 }
+    title: '+1 ЗАМОРОЗКА И УСИЛИТЕЛИ',
+    desc: '+1 к лимиту Заморозки, +1 Радиус (R) и +1 Скорость (F)',
+    reward: { type: 'towerLimit', tower: 'frost', amount: 1, boosts: { damage: 0, fireRate: 1, range: 1 } }
   },
   {
     id: 'gold_200',
     rarity: 'rare',
     rarityLabel: 'РЕДКИЙ КОНТРАКТ',
     icon: '💎',
-    title: '+200 КРЕДИТОВ',
-    desc: 'Крупный транш орбитального командования',
-    reward: { type: 'gold', amount: 200 }
+    title: '+200 КРЕДИТОВ И УСИЛИТЕЛИ',
+    desc: 'Крупный транш + по 1 усилителю Урона (D) и Радиуса (R)',
+    reward: { type: 'gold', amount: 200, boosts: { damage: 1, fireRate: 0, range: 1 } }
   },
   {
     id: 'boosts_all',
     rarity: 'rare',
     rarityLabel: 'РЕДКИЙ КОНТРАКТ',
     icon: '🔋',
-    title: 'ПОЛНЫЙ БОЕКОМПЛЕКТ',
-    desc: 'По +1 усилителю каждого типа (D, F, R)',
-    reward: { type: 'boosts', damage: 1, fireRate: 1, range: 1 }
+    title: 'ДВОЙНОЙ БОЕКОМПЛЕКТ',
+    desc: 'По +2 усилителя каждого типа (D, F, R)',
+    reward: { type: 'boosts', damage: 2, fireRate: 2, range: 2 }
   },
 
-  // Легендарные / Джекпот (золотые)
+  // Легендарные / Джекпот (золотые) — везде + полный набор усилителей
   {
     id: 'limit_bomb_gold',
     rarity: 'legendary',
     rarityLabel: 'ДЖЕКПОТ СНАБЖЕНИЯ',
     icon: '💣',
-    title: '+1 БОМБАРДА И +100 КР.',
-    desc: 'Доп. слот Бомбарды и средства на развёртывание',
-    reward: { type: 'comboBomb', tower: 'bomb', amount: 1, gold: 100 }
+    title: '+1 БОМБАРДА, +100 КР. И БУСТЫ',
+    desc: 'Доп. Бомбарда, 100 кр. и по +1 усилителю (D, F, R)',
+    reward: { type: 'comboBomb', tower: 'bomb', amount: 1, gold: 100, boosts: { damage: 1, fireRate: 1, range: 1 } }
   },
   {
     id: 'gold_350',
     rarity: 'legendary',
     rarityLabel: 'ДЖЕКПОТ СНАБЖЕНИЯ',
     icon: '👑',
-    title: '+350 КРЕДИТОВ',
-    desc: 'Максимальный бюджет на оборону сектора',
-    reward: { type: 'gold', amount: 350 }
+    title: '+350 КРЕДИТОВ И МЕГА-БУСТЫ',
+    desc: 'Максимальный бюджет и по +2 усилителя (D, F, R)',
+    reward: { type: 'gold', amount: 350, boosts: { damage: 2, fireRate: 2, range: 2 } }
   }
+
 ];
 
 const rollOneItem = (excludeIds = []) => {

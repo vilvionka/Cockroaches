@@ -48,7 +48,7 @@ function App() {
           <GameCanvas isPaused={!gameStarted} />
           <TopHud />
           <LevelCompleteModal />
-
+          <UnlockWeaponModal />
           <SupplyDropModal />
           <EmergencyStrikeModal />
         </div>
