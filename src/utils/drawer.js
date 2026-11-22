@@ -156,6 +156,18 @@ export const drawTowers = (ctx, towers) => {
       ctx.restore();
     }
 
+    if (tower.minRange) {
+      ctx.beginPath();
+      ctx.arc(tower.x, tower.y, tower.minRange, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 82, 82, 0.08)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 82, 82, 0.45)';
+      ctx.setLineDash([5, 5]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+
     // --- 2. ЛЁГКАЯ ТЕНЬ ОТ БАШНИ (БЕЗ ctx.filter) ---
     ctx.save();
     ctx.beginPath();
@@ -236,6 +248,75 @@ export const drawTowers = (ctx, towers) => {
       ctx.strokeRect(barX, barY, barW, barH);
       ctx.restore();
     }
+
+
+    // --- 6. ИНДИКАТОР ЗАРЯДКИ РАКЕТНОЙ ШАХТЫ НАД БАШНЕЙ ---
+    if (tower.isRocketSilo && !tower.underConstruction) {
+      ctx.save();
+      const markerY = tower.y - tower.size / 2 - 14;
+      const isReady = (tower.ammoReady || 0) > 0;
+
+      if (isReady) {
+        // Пульсирующая надпись "ГОТОВ!"
+        const pulse = 0.8 + Math.sin(Date.now() / 180) * 0.2;
+        ctx.globalAlpha = pulse;
+        ctx.font = 'bold 10px "Orbitron", Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.strokeText('ГОТОВ!', tower.x, markerY);
+        ctx.fillStyle = '#00e5ff';
+        ctx.fillText('ГОТОВ!', tower.x, markerY);
+      } else {
+        // Заполняющийся кружочек зарядки (макс. время зарядки = 1500 кадров)
+        const maxCharge = 1500;
+        const chargeLeft = tower.chargeTimer ?? maxCharge;
+        const progress = Math.min(1, Math.max(0, 1 - chargeLeft / maxCharge));
+        const radius = 9;
+
+        // Тёмная подложка кружка
+        ctx.beginPath();
+        ctx.arc(tower.x, markerY, radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(6, 12, 20, 0.88)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Заполняющийся сектор (от -90 градусов по часовой стрелке)
+        if (progress > 0) {
+          ctx.beginPath();
+          ctx.moveTo(tower.x, markerY);
+          ctx.arc(
+            tower.x,
+            markerY,
+            radius - 1,
+            -Math.PI / 2,
+            -Math.PI / 2 + Math.PI * 2 * progress
+          );
+          ctx.closePath();
+          ctx.fillStyle = '#FF9800';
+          ctx.fill();
+        }
+
+        // Тонкий внешний ободок прогресса
+        ctx.beginPath();
+        ctx.arc(
+          tower.x,
+          markerY,
+          radius,
+          -Math.PI / 2,
+          -Math.PI / 2 + Math.PI * 2 * progress
+        );
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
 
   });
 };
@@ -336,7 +417,9 @@ export const drawEnemies = (ctx, enemies, roadPaths) => {
 
 // Рисуем пули
 export const drawBullets = (ctx, bullets) => {
+
   bullets.forEach((bullet) => {
+    if (bullet.launchDelay > 0) return;
     ctx.fillStyle = bullet.bulletType === 'frost' ? '#00E5FF' : '#FFEB3B'; // Ледяная пуля — голубая неон, обычная — желтая
     ctx.beginPath();
     ctx.arc(bullet.x, bullet.y, 3, 0, Math.PI * 2); // Снаряд фроста сделаем чуть крупнее (3px вместо 2px)
@@ -457,6 +540,22 @@ export const drawRoadHole = (ctx, activeHoleIndex, roadPaths, activeHolePathInde
 // --- ОТРИСОВКА МОБИЛЬНОГО ПРИЗРАКА БАШНИ И РАДИУСА ---
 export const drawBuildPreview = (ctx, preview, assets) => {
   if (!preview) return;
+
+
+  const previewConfig = useGameStore.getState().towerTypes?.[preview.type];
+  if (previewConfig?.minRange) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(preview.x, preview.y, previewConfig.minRange, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 82, 82, 0.1)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 82, 82, 0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 5]);
+    ctx.stroke();
+    ctx.restore();
+  }
+
 
   // 1. Рисуем бирюзовый круг радиуса действия башни
   ctx.save();

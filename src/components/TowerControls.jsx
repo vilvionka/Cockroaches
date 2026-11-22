@@ -24,7 +24,7 @@ export const TowerControls = () => {
   const isStandardGun = !isRocket && !isAntenna;
 
   // Математика урона ракеты (теперь выводится честно!)
-  let rocketDamage = Math.round(200 * Math.pow(1.2, currentLvl - 1));
+  let rocketDamage = Math.round(500 * Math.pow(1.2, currentLvl - 1));
   if (activeTower.specialization === 'nuke') rocketDamage = Math.round(rocketDamage * 1.5);
 
   return (
@@ -187,6 +187,17 @@ export const TowerControls = () => {
               </button>
             </div>
           )}
+          {activeTower.type === 'mlrs' && (
+            <div className={styles.spec_buttons_row}>
+              <button onClick={() => useGameStore.getState().specializeTower('mlrs_aoe')} disabled={gold < upgradePrice || gameOver} className={styles.spec_select_btn}>
+                ШКВАЛ АОЕ<br /><small>Радиус взрыва снарядов +60%</small>
+              </button>
+              <button onClick={() => useGameStore.getState().specializeTower('mlrs_heavy')} disabled={gold < upgradePrice || gameOver} className={styles.spec_select_btn} style={{ borderColor: '#FFD700', color: '#FFD700' }}>
+                ТЯЖЁЛЫЕ БЧ<br /><small>Урон каждого снаряда x2.2</small>
+              </button>
+            </div>
+          )}
+
         </div>
       ) : (
         <button

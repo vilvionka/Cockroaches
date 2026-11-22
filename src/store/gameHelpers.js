@@ -155,7 +155,11 @@ export const updateTowersAndShooting = (towers, enemies, bullets, currentParticl
 
   const state = useGameStore.getState();
 
+
+
   const updatedTowers = towers.map((tower) => {
+
+
 
     if (tower.isAntenna || tower.isRocketSilo || tower.underConstruction) {
       return tower;
@@ -182,6 +186,7 @@ export const updateTowersAndShooting = (towers, enemies, bullets, currentParticl
 
     // Текущий рабочий радиус с учетом бустов
     const currentMaxRange = tower.range * boostRangeMul;
+    const currentMinRange = tower.minRange || 0;
 
     let targetEnemy = null;
 
@@ -198,7 +203,7 @@ export const updateTowersAndShooting = (towers, enemies, bullets, currentParticl
         const dy = lockedEnemy.y - tower.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist <= currentMaxRange) {
+        if (dist >= currentMinRange && dist <= currentMaxRange) {
           targetEnemy = lockedEnemy; // Цель валидна, продолжаем её вести!
         }
       }
@@ -218,7 +223,7 @@ export const updateTowersAndShooting = (towers, enemies, bullets, currentParticl
         const dy = enemy.y - tower.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist < closestDist) {
+        if (dist >= currentMinRange && dist <= currentMaxRange) {
           closestDist = dist;
           targetEnemy = enemy;
         }
@@ -312,21 +317,67 @@ export const updateTowersAndShooting = (towers, enemies, bullets, currentParticl
         const finalDamage = Math.round(rawDamage * boostDamageMul);
 
 
-        newBullets.push({
-          id: Math.random(),
-          x: tower.x,
-          y: tower.y,
-          targetId: targetEnemy.id,
-          speed: 8,
-          damage: finalDamage,
-          isCrit: isCrit, // Передаем флаг крита в пулю
-          bulletType: tower.bulletType,
-          specialization: tower.specialization,
-          splashRadius: tower.splashRadius || 0,
-          splashDamage: isCrit ? Math.round((tower.splashDamage || 0) * (tower.critMultiplier || 1.5)) : (tower.splashDamage || 0),
-          slowDuration: tower.slowDuration || 0,
-          slowFactor: tower.slowFactor || 0
-        });
+        if (tower.bulletType === 'mlrs') {
+          const enemyPath = state.roadPaths?.[targetEnemy.assignedPathIndex || 0] || [];
+          const pA = enemyPath[targetEnemy.currentPointIndex] || { x: targetEnemy.x, y: targetEnemy.y };
+          const pB = enemyPath[targetEnemy.currentPointIndex + 1] || pA;
+          const segDx = pB.x - pA.x;
+          const segDy = pB.y - pA.y;
+          const segLen = Math.sqrt(segDx * segDx + segDy * segDy) || 1;
+          const dirX = segDx / segLen;
+          const dirY = segDy / segLen;
+
+          const offsets = [-20, -10, 10, 20, 30];
+
+          offsets.forEach((stepOffset, idx) => {
+            let shellDmg = tower.damage;
+            if (tower.minDamage !== undefined && tower.maxDamage !== undefined) {
+              shellDmg = Math.floor(Math.random() * (tower.maxDamage - tower.minDamage + 1)) + tower.minDamage;
+            }
+            let shellCrit = false;
+            if (tower.critChance && Math.random() < tower.critChance) {
+              shellCrit = true;
+              shellDmg = Math.round(shellDmg * (tower.critMultiplier || 1.5));
+            }
+            shellDmg = Math.round(shellDmg * boostDamageMul);
+
+            newBullets.push({
+              id: Math.random(),
+              x: tower.x,
+              y: tower.y,
+              targetX: targetEnemy.x + dirX * stepOffset,
+              targetY: targetEnemy.y + dirY * stepOffset,
+              isPointTarget: true,
+              launchDelay: idx * 5,
+              speed: 7,
+              damage: shellDmg,
+              isCrit: shellCrit,
+              bulletType: 'splash',
+              specialization: tower.specialization,
+              splashRadius: tower.splashRadius || 45,
+              splashDamage: shellCrit
+                ? Math.round((tower.splashDamage || 20) * (tower.critMultiplier || 1.5))
+                : (tower.splashDamage || 20)
+            });
+          });
+        } else {
+          newBullets.push({
+            id: Math.random(),
+            x: tower.x,
+            y: tower.y,
+            targetId: targetEnemy.id,
+            speed: 8,
+            damage: finalDamage,
+            isCrit: isCrit,
+            bulletType: tower.bulletType,
+            specialization: tower.specialization,
+            splashRadius: tower.splashRadius || 0,
+            splashDamage: isCrit ? Math.round((tower.splashDamage || 0) * (tower.critMultiplier || 1.5)) : (tower.splashDamage || 0),
+            slowDuration: tower.slowDuration || 0,
+            slowFactor: tower.slowFactor || 0
+          });
+        }
+
       }
     }
 
@@ -371,6 +422,69 @@ export const updateBulletsAndCollisions = (
   const currentBoostsCount = existingDroppedItems.filter(i => i.boostType !== 'gold').length;
 
   const updatedBullets = bullets.map((bullet) => {
+
+    // Если снаряд ждёт своей очереди в залпе РСЗО
+    if (bullet.launchDelay && bullet.launchDelay > 0) {
+      return { ...bullet, launchDelay: bullet.launchDelay - 1 };
+    }
+
+    // Если это реактивный снаряд РСЗО, летящий в точку дороги (targetX, targetY)
+    if (bullet.isPointTarget) {
+      const dx = bullet.targetX - bullet.x;
+      const dy = bullet.targetY - bullet.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < 12) {
+        // Прямой + сплэш урон всем жукам в радиусе взрыва снаряда
+        enemies.forEach((enemy) => {
+          const eDist = Math.sqrt((enemy.x - bullet.targetX) ** 2 + (enemy.y - bullet.targetY) ** 2);
+          if (eDist <= bullet.splashRadius) {
+            const resistMul = enemy.splashResist ? (1 - enemy.splashResist) : 1;
+            const dmg = eDist <= 22
+              ? Math.round(bullet.damage * resistMul)
+              : Math.round(bullet.splashDamage * resistMul);
+
+            enemy.hp -= dmg;
+            newDamageTexts.push({
+              id: Math.random(),
+              x: enemy.x + (Math.random() * 14 - 7),
+              y: enemy.y - 15,
+              text: `-${dmg}`,
+              color: bullet.isCrit ? '#FF3D00' : '#FF9800',
+              isCrit: bullet.isCrit,
+              alpha: 1,
+              timer: 35
+            });
+          }
+        });
+
+        newExplosions.push({
+          id: Math.random(),
+          x: bullet.targetX,
+          y: bullet.targetY,
+          type: 'bomb_blast',
+          angle: Math.random() * Math.PI * 2,
+          currentFrame: 0,
+          tickCounter: 0,
+          cols: 4,
+          rows: 2,
+          totalFrames: 8,
+          animSpeed: 4,
+          size: bullet.splashRadius * 1.3
+        });
+
+        return null;
+      }
+
+      const angle = Math.atan2(dy, dx);
+      return {
+        ...bullet,
+        x: bullet.x + Math.cos(angle) * bullet.speed,
+        y: bullet.y + Math.sin(angle) * bullet.speed
+      };
+    }
+
+
     const target = enemies.find(e => e.id === bullet.targetId);
     if (!target) return null;
 
@@ -542,13 +656,13 @@ export const updateBulletsAndCollisions = (
             const childType = enemy.bossSpeciesSource;
             const baseChildTemplate = state.enemyTypes[childType];
 
-            // Находим конфиг уровня БЕЗОПАСНО, так как теперь LEVELS_CONFIG импортирован сверху
-            const currentLvlConfig = LEVELS_CONFIG[currentLevel || 1];
+            const levelBaseDifficulty = 1 + ((currentLevel || 1) - 1) * 0.65;
             const levelGrowthRate = 0.12 + ((currentLevel || 1) - 1) * 0.04;
-            const difficultyMultiplier = 1 + (state.waveNumber - 1) * levelGrowthRate;
+            const currentLvlWave = Math.max(0, (state.levelWaveNumber || 1) - 1);
+            const difficultyMultiplier = +(levelBaseDifficulty + currentLvlWave * levelGrowthRate).toFixed(2);
             const childHp = Math.round(baseChildTemplate.hp * difficultyMultiplier);
+            const effectiveWaveStep = ((currentLevel || 1) - 1) * 3 + (currentLvlWave + 1);
 
-            // Создаем 2 новых жука
             for (let k = 0; k < 2; k++) {
               const offsetX = (Math.random() * 30 - 15);
               const offsetY = (Math.random() * 30 - 15);
@@ -560,7 +674,7 @@ export const updateBulletsAndCollisions = (
                 y: enemy.y + offsetY,
                 hp: childHp,
                 maxHp: childHp,
-                reward: Math.round(baseChildTemplate.reward + (state.waveNumber * 1.5)),
+                reward: Math.round(baseChildTemplate.reward + (effectiveWaveStep * 1.5)),
                 assignedPathIndex: enemy.assignedPathIndex,
                 currentPointIndex: enemy.currentPointIndex,
                 currentFrame: 0,
@@ -568,8 +682,6 @@ export const updateBulletsAndCollisions = (
                 speed: baseChildTemplate.speed * 1.2
               });
             }
-
-
           }
 
           // 💰 РЕАНИМАЦИЯ И ПОЛНОЕ ВОССТАНОВЛЕНИЕ ВЫПАДЕНИЯ БОНУСОВ И МОНЕТ
@@ -743,12 +855,14 @@ export const generateWaveBlueprint = (waveNumber, enemyTypes, roadPaths, current
   const baseEnemiesForLevel = 8 + currentLevel * 2;
   const totalEnemies = baseEnemiesForLevel + (levelWaveNumber * 4);
 
+  // Базовый порог сложности уровня + прирост за каждую волну внутри уровня (не зависит от перезагрузок)
+  const levelBaseDifficulty = 1 + (currentLevel - 1) * 0.65;
   const levelGrowthRate = 0.12 + (currentLevel - 1) * 0.04;
-  const difficultyMultiplier = 1 + (waveNumber - 1) * levelGrowthRate;
+  const difficultyMultiplier = +(levelBaseDifficulty + levelWaveNumber * levelGrowthRate).toFixed(2);
 
-  const isFirstWaveOfLevel = levelWaveNumber === 0;
-  const currentWaveModifier = isFirstWaveOfLevel ? 1 : waveNumber;
-  const baseDelay = Math.max(35, 125 - currentWaveModifier * 4);
+  // Темп выхода жуков привязан к текущему уровню и его волне
+  const effectiveWaveStep = (currentLevel - 1) * 3 + (levelWaveNumber + 1);
+  const baseDelay = Math.max(35, 125 - effectiveWaveStep * 4);
 
   let holeIndex = null;
   let holePathIndex = null;
@@ -761,9 +875,8 @@ export const generateWaveBlueprint = (waveNumber, enemyTypes, roadPaths, current
     }
   }
 
-  // Массив видов жуков по уровням для определения, чья матка идет на каком уровне
+  // Массив видов жуков по уровням для определения, чья матка идёт на каком уровне
   const levelBossOrder = ['normal', 'ant', 'beetle', 'rhino', 'fly'];
-  // На всякий случай закольцуем, если уровней больше 5
   const currentBossSpecies = levelBossOrder[(currentLevel - 1) % levelBossOrder.length];
 
   for (let i = 0; i < totalEnemies; i++) {
@@ -811,7 +924,7 @@ export const generateWaveBlueprint = (waveNumber, enemyTypes, roadPaths, current
     const baseEnemy = enemyTypes[chosenType];
     const delay = i === 0 ? 30 : Math.round(baseDelay * (0.7 + Math.random() * 0.5));
     const scaledHp = Math.round(baseEnemy.hp * difficultyMultiplier);
-    const scaledReward = Math.round(baseEnemy.reward + (waveNumber * 1.5));
+    const scaledReward = Math.round(baseEnemy.reward + (effectiveWaveStep * 1.5));
 
     const assignedPathIndex = i % roadPaths.length;
     const shouldSpawnInHole = holeIndex !== null && assignedPathIndex === holePathIndex && i >= totalEnemies / 2;
@@ -827,36 +940,36 @@ export const generateWaveBlueprint = (waveNumber, enemyTypes, roadPaths, current
     });
   }
 
-  // 🔥 ЭКСТРЕННАЯ ПРОВЕРКА: Проверяем, последняя ли это волна на текущем уровне
+  // Финальная волна уровня: добавляем Королеву Улья в конце потока без паузы
   if (levelWaveNumber === maxWaves - 1) {
     const baseBossTemplate = enemyTypes['boss'];
     const correspondingSpecies = enemyTypes[currentBossSpecies];
 
-    // Берем ХП базового вида жука для этого уровня, умножаем на ДИФФИКУЛЬТИ и на 4!
     const bossHp = Math.round(correspondingSpecies.hp * difficultyMultiplier * 4);
     const bossReward = Math.round(baseBossTemplate.reward * difficultyMultiplier);
+    const bossSpeed = +(correspondingSpecies.speed * 0.85).toFixed(2);
 
-    // Спрайт строится по твоему правилу: /queen_cockroach.png, /queen_ant.png и т.д.
     const fileSuffix = currentBossSpecies === 'normal' ? 'cockroach' : currentBossSpecies;
     const bossSpritePath = `./queen_${fileSuffix}.png`;
 
     blueprint.push({
       ...baseBossTemplate,
+      speed: bossSpeed,
       hp: bossHp,
       maxHp: bossHp,
       reward: bossReward,
       spritePath: bossSpritePath,
       bloodColor: correspondingSpecies.bloodColor,
-      // Матка идет по случайному пути (или первому, если путь один)
       assignedPathIndex: Math.floor(Math.random() * roadPaths.length),
-      spawnPointIndex: 0, // Босс всегда идет гордо с самого начала дороги
-      delay: 180, // 👈 БОЛЬШОЙ ШАГ (Таймаут 3 секунды в кадрах после последнего моба)
-      bossSpeciesSource: currentBossSpecies // Запоминаем, кого спавнить при смерти!
+      spawnPointIndex: 0,
+      delay: baseDelay,
+      bossSpeciesSource: currentBossSpecies
     });
   }
 
   return { blueprint, holeIndex, holePathIndex };
 };
+
 
 
 

@@ -86,11 +86,14 @@ export const preloadAllAssets = (onProgress) => {
     register(assets.roadStraight, './road_straight.png');
     register(assets.roadCorner, './road_corner.png');
     register(assets.roadTJunction, './road_t_junction.png');
+    register({ img: new Image(), loaded: false }, './supply_box.png');
 
-    ['gun', 'bomb', 'frost'].forEach((type) => {
+
+    ['gun', 'bomb', 'frost', 'mlrs'].forEach((type) => {
       assets.towers[type] = { img: new Image(), loaded: false };
       register(assets.towers[type], `./tower_${type}.png`);
     });
+
 
     assets.towers.silo = { img: new Image(), loaded: false };
     register(assets.towers.silo, './tower_silo.png');

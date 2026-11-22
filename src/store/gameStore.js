@@ -4,6 +4,38 @@ import { loadLevelDecor } from '../utils/assetLoader';
 import { saveProgress } from '../utils/storage';
 
 
+export const LEVEL_UNLOCK_INFO = {
+  2: {
+    level: 2,
+    type: 'silo',
+    name: 'РАКЕТНАЯ ШАХТА',
+    image: './tower_silo.png',
+    badge: 'НОВОЕ СУПЕРОРУЖИЕ РАЗБЛОКИРОВАНО',
+    stats: [
+      { label: 'СТОИМОСТЬ', value: '500 КР.' },
+      { label: 'ДАЛЬНОСТЬ', value: 'ВСЯ КАРТА' },
+      { label: 'ТИП УДАРА', value: 'ТОЧЕЧНЫЙ ЗАЛП' }
+    ],
+    description: 'Стационарная пусковая установка. Размещается на специальной стартовой площадке и позволяет наносить ручной ракетный удар по любой точке дороги.'
+  },
+  3: {
+    level: 3,
+    type: 'mlrs',
+    name: 'БОЕВАЯ РСЗО',
+    image: './tower_mlrs.png',
+    badge: 'НОВАЯ АРТИЛЛЕРИЙСКАЯ СИСТЕМА',
+    stats: [
+      { label: 'СТОИМОСТЬ', value: '450 КР.' },
+      { label: 'ЗОНА ОГНЯ', value: '300 – 400 PX' },
+      { label: 'ЗАЛП', value: '5 РЕАКТИВНЫХ СНАРЯДОВ' }
+    ],
+    description: 'Дальнобойная система залпового огня. Не бьёт вблизи (мёртвая зона до 300 px), но накрывает дорогу каскадом из 5 снарядов (3 вперёд и 2 назад вдоль пути) с микро-задержкой.'
+  }
+  // Сюда позже легко добавите 4: { ... } и 5: { ... }
+};
+
+
+
 
 export const LEVELS_CONFIG = {
   1: {
@@ -33,7 +65,7 @@ export const LEVELS_CONFIG = {
     ],
     maxWaves: 6,
     basePoint: { x: 800, y: 270 }, // База закреплена на финальной точке
-    rocketPad: { x: 650, y: 150 },
+    //rocketPad: { x: 650, y: 150 },
     decorations: [
       { id: 'dec_1', type: 'obj1', x: 400, y: 120, size: 100 },
       { id: 'dec_2', type: 'obj2', x: 150, y: 400, size: 120 }
@@ -86,7 +118,113 @@ export const LEVELS_CONFIG = {
       { id: 'dec_2_1', type: 'obj1', x: 460, y: 120, size: 100 },
       { id: 'dec_2_2', type: 'obj2', x: 160, y: 300, size: 110 }
     ]
-  }
+  },
+  3: {
+    // Сетка плиток 10x13 (60x60 px каждая)
+    tileMap: [
+      [null, null, null, null, null, null, null, null, null, null, null, null, null],
+      // Верхняя дорога (row 1 -> y = 90) делает петлю вниз на row 4
+      [{ type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'corner', angle: 0 }, null, null, null, null, null, null, null, null, null],
+      [null, null, null, { type: 'straight', angle: 90 }, null, null, { type: 'corner', angle: 270 }, { type: 'straight', angle: 0 }, { type: 'corner', angle: 0 }, null, null, null, null],
+      [null, null, null, { type: 'straight', angle: 90 }, null, null, { type: 'straight', angle: 90 }, null, { type: 'straight', angle: 90 }, null, null, null, null],
+      // Слияние верхней и нижней дорог на Т-перекрёстке (col 10, row 4 -> x = 630, y = 270) и выход к Базе
+      [null, null, null, { type: 'corner', angle: 180 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'corner', angle: 90 }, null, { type: 'corner', angle: 180 }, { type: 'straight', angle: 0 }, { type: 't_junction', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }],
+      [null, null, null, null, null, null, null, null, null, null, { type: 'straight', angle: 90 }, null, null],
+      // Нижняя дорога поднимается к перекрёстку
+      [null, null, null, null, null, { type: 'corner', angle: 270 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'corner', angle: 90 }, null, null],
+      [null, null, null, null, null, { type: 'straight', angle: 90 }, null, null, null, null, null, null, null],
+      // Нижний вход (row 8 -> y = 510)
+      [{ type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'corner', angle: 90 }, null, null, null, null, null, null, null],
+      [null, null, null, null, null, null, null, null, null, null, null, null, null],
+    ],
+
+    // Физические рельсы строго по центрам плиток для обеих дорог
+    paths: [
+      // Путь 0: Верхняя дорога
+      [
+        { x: 0, y: 90 },
+        { x: 210, y: 90 },
+        { x: 210, y: 270 },
+        { x: 390, y: 270 },
+        { x: 390, y: 150 },
+        { x: 510, y: 150 },
+        { x: 510, y: 270 },
+        { x: 630, y: 270 },
+        { x: 800, y: 270 }
+      ],
+      // Путь 1: Нижняя дорога
+      [
+        { x: 0, y: 510 },
+        { x: 330, y: 510 },
+        { x: 330, y: 390 },
+        { x: 630, y: 390 },
+        { x: 630, y: 270 },
+        { x: 800, y: 270 }
+      ]
+    ],
+
+    maxWaves: 8,
+    basePoint: { x: 800, y: 270 },
+    rocketPad: { x: 690, y: 120 }, // Площадка для ракетницы в свободном правом верхнем секторе
+    decorations: [
+      { id: 'dec_3_1', type: 'obj1', x: 110, y: 330, size: 110 },
+      { id: 'dec_3_2', type: 'obj2', x: 470, y: 500, size: 115 }
+    ]
+  },
+  4: {
+    // Сетка плиток 10x13 (60x60 px каждая)
+    tileMap: [
+      [null, null, null, null, null, null, null, null, null, null, null, null, null],
+      // Верхний вход (row 1 -> y = 90) идёт вправо до col 5, затем спускается на row 3
+      [{ type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'corner', angle: 0 }, null, null, null, null, null, null, null],
+      [null, null, null, null, null, { type: 'straight', angle: 90 }, null, null, null, null, null, null, null],
+      [null, null, null, null, null, { type: 'corner', angle: 180 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'corner', angle: 0 }, null, null, null, null],
+      // Слияние дорог на Т-перекрёстке (col 8, row 4 -> x = 510, y = 270) и прямой выход к Базе
+      [null, null, null, null, null, null, null, null, { type: 't_junction', angle: 270 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }],
+      [null, null, { type: 'corner', angle: 270 }, { type: 'straight', angle: 0 }, { type: 'corner', angle: 0 }, null, null, null, { type: 'straight', angle: 90 }, null, null, null, null],
+      [null, null, { type: 'straight', angle: 90 }, null, { type: 'straight', angle: 90 }, null, null, null, { type: 'straight', angle: 90 }, null, null, null, null],
+      // Нижний вход (row 7 -> y = 450) делает петлю вверх на row 5 и уходит на row 8 к перекрёстку
+      [{ type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'corner', angle: 90 }, null, { type: 'corner', angle: 180 }, { type: 'straight', angle: 0 }, { type: 'corner', angle: 0 }, null, { type: 'straight', angle: 90 }, null, null, null, null],
+      [null, null, null, null, null, null, { type: 'corner', angle: 180 }, { type: 'straight', angle: 0 }, { type: 'corner', angle: 90 }, null, null, null, null],
+      [null, null, null, null, null, null, null, null, null, null, null, null, null],
+    ],
+
+    // Физические рельсы строго по центрам плиток для обеих дорог
+    paths: [
+      // Путь 0: Верхняя дорога
+      [
+        { x: 0, y: 90 },
+        { x: 330, y: 90 },
+        { x: 330, y: 210 },
+        { x: 510, y: 210 },
+        { x: 510, y: 270 },
+        { x: 800, y: 270 }
+      ],
+      // Путь 1: Нижняя дорога с двойной петлёй
+      [
+        { x: 0, y: 450 },
+        { x: 150, y: 450 },
+        { x: 150, y: 330 },
+        { x: 270, y: 330 },
+        { x: 270, y: 450 },
+        { x: 390, y: 450 },
+        { x: 390, y: 510 },
+        { x: 510, y: 510 },
+        { x: 510, y: 270 },
+        { x: 800, y: 270 }
+      ]
+    ],
+
+    maxWaves: 9,
+    basePoint: { x: 800, y: 270 },
+    rocketPad: { x: 660, y: 120 }, // Площадка для ракетницы в правом верхнем секторе
+    decorations: [
+      { id: 'dec_4_1', type: 'obj1', x: 150, y: 210, size: 110 },
+      { id: 'dec_4_2', type: 'obj2', x: 660, y: 440, size: 120 }
+    ]
+  },
+
+
 };
 
 
@@ -108,6 +246,9 @@ export const useGameStore = create((set, get) => ({
   setActiveTab: (tab) => set({ activeTab: tab }),
   isAimingRocket: false,    // Находится ли игрок в режиме выбора точки удара
   flyingRockets: [],        // Массив летящих в данный момент ракет
+  isSupplyDropOpen: true, // Открываем кейсы на старте 1-го уровня
+  bonusTowerLimits: { gun: 0, bomb: 0, frost: 0, mlrs: 0 }, // Доп. лимиты из кейсов на текущий уровень
+
 
 
 
@@ -146,6 +287,12 @@ export const useGameStore = create((set, get) => ({
     boss: 0
   },
   isUserPaused: false,
+  isEmergencyAdOpen: false,
+  emergencyStrikeUsed: false,
+  emergencyTarget: null,
+  savedScore: 0,
+  unlockedWeaponModal: null,
+
 
 
   // Обновите объект enemyTypes, прописав цвета крови (bloodColor):
@@ -216,27 +363,6 @@ export const useGameStore = create((set, get) => ({
       name: 'Золотой панцирник',
       description: 'Тяжелый панцирь с большим запасом здоровья. Шанс уклонения от выстрелов — 7%.'
     },
-    rhino: {
-      type: 'rhino',
-      speed: 1.2,
-      hp: 1600,
-      maxHp: 1600,
-      size: 60,
-      damage: 25,
-      reward: 60,
-      scoreReward: 45, // Бронированный жук-олень — 45 очков
-      spritePath: './rhino.png',
-      bloodColor: '#ff0000',
-      cols: 4,
-      rows: 2,
-      totalFrames: 8,
-      imgWidth: 1365,  // 👈 ПОМЕНЯТЬ ТУТ
-      imgHeight: 768,  // 👈 ПОМЕНЯТЬ ТУТ
-      animSpeed: 5,
-      missChance: 0,
-      name: 'Джаггернаут',
-      description: 'Тяжелая броня полностью блокирует обычные пули Пулемета. Пробивается только ББ-патронами, Бомбардой, Заморозкой или ракетами.'
-    },
     fly: {
       type: 'fly',
       speed: 1.3,
@@ -259,6 +385,27 @@ export const useGameStore = create((set, get) => ({
       splashResist: 0.5,
       name: 'Пиро-рейнджер',
       description: 'Высокая скорость движения. Шанс уклонения 6%, а также получает на 50% меньше урона от взрывов Бомбарды и ракет.'
+    },
+    rhino: {
+      type: 'rhino',
+      speed: 1.2,
+      hp: 1600,
+      maxHp: 1600,
+      size: 60,
+      damage: 25,
+      reward: 60,
+      scoreReward: 45, // Бронированный жук-олень — 45 очков
+      spritePath: './rhino.png',
+      bloodColor: '#ff0000',
+      cols: 4,
+      rows: 2,
+      totalFrames: 8,
+      imgWidth: 1365,  // 👈 ПОМЕНЯТЬ ТУТ
+      imgHeight: 768,  // 👈 ПОМЕНЯТЬ ТУТ
+      animSpeed: 5,
+      missChance: 0,
+      name: 'Джаггернаут',
+      description: 'Тяжелая броня полностью блокирует обычные пули Пулемета. Пробивается только ББ-патронами, Бомбардой, Заморозкой или ракетами.'
     },
     boss: {
       type: 'boss',
@@ -292,9 +439,9 @@ export const useGameStore = create((set, get) => ({
       name: 'Пулемет',
       cost: 100,
       range: 95,
-      damage: 75, // Среднее для совместимости
-      minDamage: 70,
-      maxDamage: 80,
+      damage: 750, // Среднее для совместимости
+      minDamage: 700,
+      maxDamage: 800,
       critChance: 0.08,     // 8% на 1 уровне
       critMultiplier: 1.5,  // 150% урона на 1 уровне
       fireRate: 20,
@@ -302,16 +449,17 @@ export const useGameStore = create((set, get) => ({
       bulletType: 'single',
       unlockWave: 1,
       rotationSpeed: 0.05,
-      isAntenna: false
+      isAntenna: false,
+      baseLimit: 3
     },
     bomb: {
       type: 'bomb',
       name: 'Бомбарда',
       cost: 200,
       range: 85,
-      damage: 205,
-      minDamage: 195,
-      maxDamage: 215,
+      damage: 2050,
+      minDamage: 1950,
+      maxDamage: 2150,
       critChance: 0.08,     // 8% на 1 уровне
       critMultiplier: 1.5,  // 150% урона на 1 уровне
       fireRate: 45,
@@ -321,9 +469,10 @@ export const useGameStore = create((set, get) => ({
       splashDamage: 15,
       unlockWave: 2,
       rotationSpeed: 0.02,
-      isAntenna: false
+      isAntenna: false,
+      baseLimit: 4
     },
-    frost: { type: 'frost', name: 'Заморозка', cost: 300, range: 70, damage: 3, fireRate: 30, size: 50, bulletType: 'frost', slowDuration: 120, slowFactor: 0.5, unlockWave: 3, rotationSpeed: 0.035, isAntenna: false },
+    frost: { type: 'frost', name: 'Заморозка', cost: 300, range: 70, damage: 3, fireRate: 30, size: 50, bulletType: 'frost', slowDuration: 120, slowFactor: 0.5, unlockWave: 3, rotationSpeed: 0.035, isAntenna: false, baseLimit: 3 },
 
     silo: {
       type: 'silo',
@@ -332,8 +481,33 @@ export const useGameStore = create((set, get) => ({
       range: 9999,
       size: 60,
       isRocketSilo: true,
-      unlockWave: 1
+      unlockWave: 1,
+      unlockLevel: 2,
     },
+
+    mlrs: {
+      type: 'mlrs',
+      name: 'РСЗО',
+      cost: 450,
+      minRange: 300,       // Внутренний радиус (ближе не стреляет)
+      range: 400,          // Внешний радиус (стреляет в кольце 300–400 px)
+      damage: 205,         // Урон каждого из 5 снарядов (как у Бомбарды)
+      minDamage: 195,
+      maxDamage: 215,
+      critChance: 0.08,
+      critMultiplier: 1.5,
+      fireRate: 150,       // Редкий залп (раз в 2.5 секунды)
+      size: 52,
+      bulletType: 'mlrs',
+      splashRadius: 45,
+      splashDamage: 20,
+      unlockLevel: 3,      // Открывается с 3-го уровня
+      unlockWave: 1,
+      rotationSpeed: 0.025,
+      isAntenna: false,
+      baseLimit: 2         // Лимит на 3 уровне: 2 + (3 - 1) = 4 шт. (или поставьте 1, если нужно 3 шт.)
+    },
+
     // ТРИ ОТДЕЛЬНЫЕ АНТЕННЫ С РАЗНЫМ КОЛИЧЕСТВОМ ПОДКЛЮЧЕНИЙ
     an3: { type: 'an3', name: 'АН-3', cost: 120, range: 250, size: 50, isAntenna: true, maxConnections: 3, unlockWave: 1 },
     an4: { type: 'an4', name: 'АН-4', cost: 180, range: 280, size: 50, isAntenna: true, maxConnections: 4, unlockWave: 2 },
@@ -354,6 +528,42 @@ export const useGameStore = create((set, get) => ({
     return { isUserPaused: nextPaused };
   }),
 
+  claimSupplyDrop: (reward) => set((state) => {
+    if (!reward) return { isSupplyDropOpen: false };
+
+    let nextGold = state.gold;
+    let nextCakeHp = state.cakeHp;
+    let nextMaxCakeHp = state.maxCakeHp || 100;
+    const nextBoosts = { ...state.boostsInventory };
+    const nextBonusLimits = { ...(state.bonusTowerLimits || { gun: 0, bomb: 0, frost: 0 }) };
+
+    if (reward.type === 'gold') {
+      nextGold += reward.amount;
+    } else if (reward.type === 'boosts') {
+      nextBoosts.damage += reward.damage || 0;
+      nextBoosts.fireRate += reward.fireRate || 0;
+      nextBoosts.range += reward.range || 0;
+    } else if (reward.type === 'baseHp') {
+      nextMaxCakeHp += reward.amount;
+      nextCakeHp += reward.amount;
+    } else if (reward.type === 'towerLimit') {
+      nextBonusLimits[reward.tower] = (nextBonusLimits[reward.tower] || 0) + reward.amount;
+    } else if (reward.type === 'comboBomb') {
+      nextBonusLimits[reward.tower] = (nextBonusLimits[reward.tower] || 0) + reward.amount;
+      nextGold += reward.gold || 0;
+    }
+
+    return {
+      gold: nextGold,
+      cakeHp: nextCakeHp,
+      maxCakeHp: nextMaxCakeHp,
+      boostsInventory: nextBoosts,
+      bonusTowerLimits: nextBonusLimits,
+      isSupplyDropOpen: false
+    };
+  }),
+
+
   applySavedLevel: (savedLevel, savedScore = 0) => set(() => {
     const validLevel = LEVELS_CONFIG[savedLevel] ? savedLevel : 1;
     loadLevelDecor(validLevel);
@@ -365,7 +575,11 @@ export const useGameStore = create((set, get) => ({
       waveNumber: 0,
       roadPaths: LEVELS_CONFIG[validLevel].paths,
       gold: calculatedGold,
+      isSupplyDropOpen: true,
+      bonusTowerLimits: { gun: 0, bomb: 0, frost: 0, mlrs: 0 },
+      emergencyStrikeUsed: false, isEmergencyAdOpen: false, emergencyTarget: null,
       score: savedScore,
+      savedScore: savedScore,
       decorations: LEVELS_CONFIG[validLevel].decorations
         ? JSON.parse(JSON.stringify(LEVELS_CONFIG[validLevel].decorations))
         : []
@@ -431,7 +645,6 @@ export const useGameStore = create((set, get) => ({
 
 
   selectTowerToBuild: (type) => set((state) => {
-    // Повторный клик по уже выбранной башне, антенне или шахте — отменяет выбор и убирает призрака
     if (state.selectedTowerType === type) {
       return {
         selectedTowerType: null,
@@ -439,6 +652,19 @@ export const useGameStore = create((set, get) => ({
         isAimingRocket: false
       };
     }
+
+    const towerData = state.towerTypes[type];
+    if (towerData?.baseLimit !== undefined) {
+      const bonusLimit = state.bonusTowerLimits?.[type] || 0;
+      const maxAllowed = towerData.baseLimit + (state.currentLevel - 1) + bonusLimit;
+
+      const builtCount = state.towers.filter((t) => t.type === type).length;
+      if (builtCount >= maxAllowed) {
+        return { selectedTowerType: null, buildPreview: null, isAimingRocket: false };
+      }
+    }
+
+
 
     // Если выбрали Ракетную Шахту — сразу показываем её превью на стартовой площадке
     if (type === 'silo') {
@@ -550,11 +776,24 @@ export const useGameStore = create((set, get) => ({
         y: buildPreview.y - 28,
         text: text,
         color: '#FF5252',
-        isAlert: true, // Помечаем, что это системное предупреждение, а не урон
+        isAlert: true,
         alpha: 1,
-        timer: 150     // 2.5 секунды (150 кадров при 60 FPS)
+        timer: 150
       });
     };
+
+    if (towerData.baseLimit !== undefined) {
+      const bonusLimit = state.bonusTowerLimits?.[buildPreview.type] || 0;
+      const maxAllowed = towerData.baseLimit + (currentLevel - 1) + bonusLimit;
+
+      const builtCount = towers.filter((t) => t.type === buildPreview.type).length;
+      if (builtCount >= maxAllowed) {
+        pushErrorText("ЛИМИТ БАШЕН");
+        return { buildPreview: null, selectedTowerType: null };
+      }
+    }
+
+
 
 
     // 1. ДЛЯ ВСЕХ, КРОМЕ РАКЕТЫ: Проверяем наличие связи с базой
@@ -771,7 +1010,18 @@ export const useGameStore = create((set, get) => ({
           specModifiers.name = 'Замораживатель Икс';
           specModifiers.slowDuration = Math.round(t.slowDuration * 1.8);
           specModifiers.slowFactor = 0.35; // Замедляет еще сильнее (до 35% скорости)
+        } else if (specType === 'mlrs_aoe') {
+          specModifiers.name = 'РСЗО (Шквал АОЕ)';
+          specModifiers.splashRadius = Math.round(t.splashRadius * 1.6);
+          specModifiers.splashDamage = Math.round(t.splashDamage * 1.5);
+        } else if (specType === 'mlrs_heavy') {
+          specModifiers.name = 'РСЗО (Бронебойная)';
+          specModifiers.damage = Math.round(t.damage * 2.2);
+          specModifiers.minDamage = Math.round(t.minDamage * 2.2);
+          specModifiers.maxDamage = Math.round(t.maxDamage * 2.2);
         }
+
+
 
         return {
           ...t,
@@ -869,16 +1119,23 @@ export const useGameStore = create((set, get) => ({
     };
   }),
 
+  closeUnlockWeaponModal: () => set({
+    unlockedWeaponModal: null,
+    isSupplyDropOpen: true // После ознакомления с новым оружием открываем орбитальные кейсы
+  }),
+
+
 
   nextLevel: () => set((state) => {
     const nextLvl = state.nextIncomingLevel;
 
     if (!LEVELS_CONFIG[nextLvl]) {
-      alert("ПОЗДРАВЛЯЕМ! ВЫ ПРОШЛИ ВСЮ ИГРУ!");
       saveProgress(1, 0);
+      set({ currentLevel: 1, savedScore: 0 });
       return get().restartGame();
     }
 
+    const unlockInfo = LEVEL_UNLOCK_INFO[nextLvl] || null;
     // Подгружаем декорации для нового уровня
     loadLevelDecor(nextLvl);
 
@@ -894,6 +1151,9 @@ export const useGameStore = create((set, get) => ({
       bullets: [],
       enemies: [],
       spawnQueue: [],
+      unlockedWeaponModal: unlockInfo,
+      isSupplyDropOpen: !unlockInfo,
+      emergencyStrikeUsed: false, isEmergencyAdOpen: false, emergencyTarget: null,
       activeHoleIndex: null,
       isUserPaused: false,
       waveActive: false,
@@ -903,6 +1163,7 @@ export const useGameStore = create((set, get) => ({
       slimeTrails: [],
       droppedItems: [], particles: [], flyingRockets: [],
       scorches: [],
+      bonusTowerLimits: { gun: 0, bomb: 0, frost: 0, mlrs: 0 },
       gold: calculatedGold, // Сбрасываем и начисляем по новой формуле
       decorations: LEVELS_CONFIG[nextLvl].decorations ? JSON.parse(JSON.stringify(LEVELS_CONFIG[nextLvl].decorations)) : [],
       cakeHp: healedHp       // Записываем подлеченный торт
@@ -1021,6 +1282,7 @@ export const useGameStore = create((set, get) => ({
       waveActive: true,
       explosions: initialExplosions,
       activeHoleIndex: holeIndex,
+      emergencyStrikeUsed: false,
       activeHolePathIndex: holePathIndex
     };
   }),
@@ -1042,8 +1304,9 @@ export const useGameStore = create((set, get) => ({
       cakeHp: 100,
       waveTimer: 900,
       waveActive: false,
+      emergencyStrikeUsed: false, isEmergencyAdOpen: false, emergencyTarget: null,
       gameOver: false,
-      score: 0,
+      score: state.savedScore || 0,
       isUserPaused: false,
       killedStats: { normal: 0, ant: 0, beetle: 0, rhino: 0, fly: 0, boss: 0 },
       scorches: [],
@@ -1065,6 +1328,8 @@ export const useGameStore = create((set, get) => ({
       nextIncomingLevel: startLevel + 1,
       buildPreview: null,
       selectedTowerType: null,
+      isSupplyDropOpen: true,
+      bonusTowerLimits: { gun: 0, bomb: 0, frost: 0, mlrs: 0 },
       selectedTowerId: null,
       decorations: LEVELS_CONFIG[startLevel].decorations
         ? JSON.parse(JSON.stringify(LEVELS_CONFIG[startLevel].decorations))
@@ -1074,7 +1339,8 @@ export const useGameStore = create((set, get) => ({
 
 
   updateGame: () => set((state) => {
-    if (state.gameOver || state.levelTransition || state.isUserPaused) return {};
+    if (state.gameOver || state.levelTransition || state.isUserPaused || state.isSupplyDropOpen || state.isEmergencyAdOpen || state.unlockedWeaponModal) return {};
+
 
     const spawnData = helpers.handleSpawning(state);
 
@@ -1143,6 +1409,7 @@ export const useGameStore = create((set, get) => ({
       state.levelWaveNumber = nextLevelWaveNumber;
       state.activeHoleIndex = holeIndex;
       state.activeHolePathIndex = holePathIndex;
+      state.emergencyStrikeUsed = false;
 
       let autoExplosions = [];
       if (holeIndex !== null) {
@@ -1233,13 +1500,14 @@ export const useGameStore = create((set, get) => ({
     const combatData = helpers.updateBulletsAndCollisions(
       towersData.bullets,
       movementData.enemies,
-      state.explosions,
+      spawnData.explosions || state.explosions, // 👈 Берём взрывы из spawnData, если волна стартовала по таймеру
       state.gold,
       state.roadPaths,
       state.damageTexts,
       state.currentLevel,
       state.droppedItems
     );
+
 
     let nextScore = state.score;
     const nextKilledStats = { ...state.killedStats };
@@ -1389,6 +1657,9 @@ export const useGameStore = create((set, get) => ({
     // Фильтруем выживших после ракет
     const finalAliveEnemies = postRocketEnemies.filter(e => e.hp > 0);
 
+
+
+
     // --- Кратеры от взрывов ---
     const nextScorches = nextScorchesList.map(s => ({
       ...s,
@@ -1411,6 +1682,49 @@ export const useGameStore = create((set, get) => ({
     // --- Таймер вспышки щита базы ---
     let nextShieldFlash = state.shieldFlashTimer || 0;
     if (nextShieldFlash > 0) nextShieldFlash -= 1;
+
+
+    // Проверка угрозы прорыва базы (1 раз за волну, если HP базы < 30% и враг ближе 120 px)
+    const maxHp = state.maxCakeHp || 100;
+    const isLowHp = movementData.cakeHp > 0 && movementData.cakeHp < maxHp * 0.3;
+
+    if (!state.emergencyStrikeUsed && !state.isEmergencyAdOpen && state.waveActive && isLowHp && finalAliveEnemies.length > 0) {
+      const basePt = LEVELS_CONFIG[state.currentLevel]?.basePoint || { x: 800, y: 270 };
+      let closestThreat = null;
+      let minDist = Infinity;
+
+      finalAliveEnemies.forEach((enemy) => {
+        const d = Math.sqrt((enemy.x - basePt.x) ** 2 + (enemy.y - basePt.y) ** 2);
+        if (d <= 120 && d < minDist) {
+          minDist = d;
+          closestThreat = enemy;
+        }
+      });
+
+      if (closestThreat) {
+        window.ysdk?.features?.GameplayAPI?.stop();
+        return {
+          enemies: finalAliveEnemies,
+          cakeHp: movementData.cakeHp,
+          towers: towersData.towers,
+          bullets: combatData.bullets,
+          explosions: nextExplosions,
+          gold: combatData.gold,
+          score: nextScore,
+          killedStats: nextKilledStats,
+          damageTexts: combinedDamageTexts,
+          droppedItems: finalDroppedItems,
+          particles: nextParticles,
+          flyingRockets: activeRockets,
+          scorches: nextScorches,
+          slimeTrails: finalSlimeTrails,
+          shieldFlashTimer: nextShieldFlash,
+          isEmergencyAdOpen: true,
+          emergencyTarget: { x: closestThreat.x, y: closestThreat.y }
+        };
+      }
+    }
+
 
     // =========================================================================
     // 2. ТЕПЕРЬ ПРОВЕРЯЕМ ОКОНЧАНИЕ ВОЛНЫ И ПЕРЕХОД НА СЛЕДУЮЩИЙ УРОВЕНЬ
@@ -1477,6 +1791,7 @@ export const useGameStore = create((set, get) => ({
           nextIncomingLevel: unlockedLevel,
           gold: finalBonusGold,
           score: nextScore,
+          savedScore: nextScore,
           killedStats: nextKilledStats,
           damageTexts: [],
           droppedItems: [],
@@ -1540,7 +1855,7 @@ export const useGameStore = create((set, get) => ({
 
     // Рассчитываем базовые характеристики на основе уровня
     const lvl = silo.level || 1;
-    let urok = 200 * Math.pow(1.2, lvl - 1);
+    let urok = 500 * Math.pow(1.2, lvl - 1);
     let radius = 65;
     let baseSpeed = 3.5 + (lvl * 0.5);
 
@@ -1585,6 +1900,65 @@ export const useGameStore = create((set, get) => ({
       isAimingRocket: false
     };
   }),
+
+  declineEmergencyStrike: () => {
+    window.ysdk?.features?.GameplayAPI?.start();
+    set({
+      isEmergencyAdOpen: false,
+      emergencyStrikeUsed: true,
+      emergencyTarget: null
+    });
+  },
+
+  triggerEmergencyRocket: () => set((state) => {
+    const basePt = LEVELS_CONFIG[state.currentLevel]?.basePoint || { x: 800, y: 270 };
+    const startX = basePt.x - 30;
+    const startY = basePt.y;
+
+    // Берём актуальную позицию ближайшего к базе врага или сохранённую точку угрозы
+    let targetX = state.emergencyTarget?.x ?? (basePt.x - 130);
+    let targetY = state.emergencyTarget?.y ?? basePt.y;
+
+    if (state.enemies && state.enemies.length > 0) {
+      let minDist = Infinity;
+      state.enemies.forEach((e) => {
+        const d = Math.sqrt((e.x - basePt.x) ** 2 + (e.y - basePt.y) ** 2);
+        if (d < minDist) {
+          minDist = d;
+          targetX = e.x;
+          targetY = e.y;
+        }
+      });
+    }
+
+    const dist = Math.sqrt((targetX - startX) ** 2 + (targetY - startY) ** 2);
+    const totalFrames = Math.max(35, Math.min(180, Math.round(dist / 4.5)));
+
+    const emergencyRocket = {
+      id: Math.random(),
+      startX,
+      startY,
+      currentX: startX,
+      currentY: startY,
+      targetX,
+      targetY,
+      progress: 0,
+      totalFrames,
+      damage: 10000,
+      blastRadius: 65,
+      spec: 'normal'
+    };
+
+    window.ysdk?.features?.GameplayAPI?.start();
+
+    return {
+      isEmergencyAdOpen: false,
+      emergencyStrikeUsed: true,
+      emergencyTarget: null,
+      flyingRockets: [...state.flyingRockets, emergencyRocket]
+    };
+  }),
+
 
 
 

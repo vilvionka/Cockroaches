@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GameCanvas } from './components/GameCanvas';
-import { useGameStore } from './store/gameStore';
+import { useGameStore, LEVELS_CONFIG } from './store/gameStore';
 import { TopHud } from './components/TopHud';
 import { GoldPanel } from './components/GoldPanel';
 import { TowerShop } from './components/TowerShop';
@@ -8,6 +8,10 @@ import { TowerControls } from './components/TowerControls';
 import { GameOverModal } from './components/GameOverModal';
 import { StartScreen } from './components/StartScreen';
 import { LevelCompleteModal } from './components/LevelCompleteModal';
+import { SupplyDropModal } from './components/SupplyDropModal';
+import { EmergencyStrikeModal } from './components/EmergencyStrikeModal';
+import { showFullscreenAd } from './utils/yandexAds';
+import { UnlockWeaponModal } from './components/UnlockWeaponModal';
 import styles from './App.module.css';
 
 function App() {
@@ -25,6 +29,13 @@ function App() {
 
   const [gameStarted, setGameStarted] = useState(false);
 
+  const handleNextLevelClick = () => {
+    showFullscreenAd(() => {
+      nextLevel();
+    });
+  };
+
+
   return (
     <div className={styles.wrap}>
       <div className={styles.game}>
@@ -37,6 +48,9 @@ function App() {
           <GameCanvas isPaused={!gameStarted} />
           <TopHud />
           <LevelCompleteModal />
+
+          <SupplyDropModal />
+          <EmergencyStrikeModal />
         </div>
 
         {/* Правая панель магазина и апгрейдов */}
@@ -59,7 +73,9 @@ function App() {
                     <h2 className={styles.level_title}>УРОВЕНЬ {currentLevel}</h2>
                     <div className={styles.wave_subtitle}>
                       {levelTransition
-                        ? `Ожидание уровня ${nextIncomingLevel}`
+                        ? (!LEVELS_CONFIG[nextIncomingLevel]
+                          ? 'Кампания завершена!'
+                          : `Ожидание уровня ${nextIncomingLevel}`)
                         : waveActive
                           ? `Идет волна: ${levelWaveNumber}`
                           : `Следующая волна: ${levelWaveNumber + 1}`}
@@ -67,10 +83,13 @@ function App() {
                   </div>
 
                   {levelTransition ? (
-                    <button onClick={nextLevel} className={`${styles.bar_btn_weln} ${styles.btn_next_level}`}>
-                      Начать уровень {nextIncomingLevel}
+                    <button onClick={handleNextLevelClick} className={`${styles.bar_btn_weln} ${styles.btn_next_level}`}>
+                      {!LEVELS_CONFIG[nextIncomingLevel]
+                        ? 'Новая игра'
+                        : `Начать уровень ${nextIncomingLevel}`}
                     </button>
                   ) : (
+
                     <button
                       onClick={startWave}
                       disabled={waveActive}

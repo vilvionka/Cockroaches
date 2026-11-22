@@ -18,6 +18,12 @@ export const TowerShop = () => {
   const towers = useGameStore((state) => state.towers);
   const hasSilo = towers.some((t) => t.isRocketSilo);
 
+  const bonusTowerLimits = useGameStore((state) => state.bonusTowerLimits);
+
+
+
+
+
   return (
     <>
       {/* ТАБЫ МАГАЗИНА */}
@@ -44,21 +50,31 @@ export const TowerShop = () => {
       <div className={styles.bar_grid}>
         {Object.values(towerTypes)
           .filter((tower) => {
+            if ((tower.unlockLevel || 1) > currentLevel) return false;
             if (activeTab === 'weapons') return !tower.isAntenna && !tower.isRocketSilo;
             if (activeTab === 'network') return tower.isAntenna === true;
             if (activeTab === 'rockets') return tower.isRocketSilo === true;
             return false;
           })
           .map((tower) => {
+
             const nextGlobalWave = waveActive ? waveNumber : waveNumber + 1;
             const isLocked = currentLevel === 1 && nextGlobalWave < tower.unlockWave;
             const isSelected = selectedTowerType === tower.type;
+
+            // Расчёт лимита для башен с baseLimit
+            const hasLimit = tower.baseLimit !== undefined;
+            const bonusLimit = bonusTowerLimits?.[tower.type] || 0;
+            const maxAllowed = hasLimit ? tower.baseLimit + (currentLevel - 1) + bonusLimit : Infinity;
+            const builtCount = hasLimit ? towers.filter((t) => t.type === tower.type).length : 0;
+            const remainingCount = hasLimit ? Math.max(0, maxAllowed - builtCount) : null;
+            const isLimitReached = hasLimit && remainingCount <= 0;
 
             return (
               <button
                 key={tower.type}
                 onClick={() => selectTowerToBuild(tower.type)}
-                disabled={gold < tower.cost || gameOver || isLocked || (tower.isRocketSilo && hasSilo)}
+                disabled={gold < tower.cost || gameOver || isLocked || isLimitReached || (tower.isRocketSilo && hasSilo)}
                 className={styles.bar_button}
                 data-selected={isSelected}
                 data-locked={isLocked}
@@ -70,20 +86,29 @@ export const TowerShop = () => {
                   </div>
                 ) : (
                   <>
+                    {hasLimit && (
+                      <span
+                        className={styles.limit_badge}
+                        data-empty={isLimitReached}
+                        title={`Доступно построек: ${remainingCount} из ${maxAllowed}`}
+                      >
+                        {remainingCount}
+                      </span>
+                    )}
+
                     <img
                       src={
                         tower.isAntenna
-                          ? `./antenna-${tower.type.replace('an', '')}.png` // Сконструирует /antenna-3.png, /antenna-4.png и т.д.
+                          ? `./antenna-${tower.type.replace('an', '')}.png`
                           : tower.isRocketSilo
                             ? './tower_silo.png'
                             : `./tower_${tower.type}.png`
                       }
-
                       alt={tower.name}
                       className={styles.tower_img}
                     />
                     <div className={styles.tower_info_block}>
-                      <span className={tower.name}>{tower.name}</span>
+                      <span className={styles.tower_name}>{tower.name}</span>
                       <span className={styles.bar_price}>{tower.cost}</span>
                     </div>
                   </>
