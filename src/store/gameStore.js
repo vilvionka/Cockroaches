@@ -514,11 +514,11 @@ export const useGameStore = create((set, get) => ({
       name: 'Пулемет',
       cost: 100,
       range: 95,
-      damage: 75, // Среднее для совместимости
-      minDamage: 70,
-      maxDamage: 80,
-      critChance: 0.08,     // 8% на 1 уровне
-      critMultiplier: 1.5,  // 150% урона на 1 уровне
+      damage: 56,
+      minDamage: 52,
+      maxDamage: 60,
+      critChance: 0.08,
+      critMultiplier: 1.5,
       fireRate: 20,
       size: 50,
       bulletType: 'single',
@@ -532,16 +532,16 @@ export const useGameStore = create((set, get) => ({
       name: 'Бомбарда',
       cost: 200,
       range: 85,
-      damage: 205,
-      minDamage: 195,
-      maxDamage: 215,
-      critChance: 0.08,     // 8% на 1 уровне
-      critMultiplier: 1.5,  // 150% урона на 1 уровне
+      damage: 165,
+      minDamage: 155,
+      maxDamage: 175,
+      critChance: 0.08,
+      critMultiplier: 1.5,
       fireRate: 45,
       size: 50,
       bulletType: 'splash',
       splashRadius: 80,
-      splashDamage: 45,
+      splashDamage: 35,
       unlockWave: 2,
       rotationSpeed: 0.025,
       isAntenna: false,
@@ -974,8 +974,20 @@ export const useGameStore = create((set, get) => ({
       }
     }
 
+    // Автоматическое усиление базового калибра Пулемёта и Бомбарды на 2–5 уровнях (+15% за уровень)
+    const isScaledWeapon = buildPreview.type === 'gun' || buildPreview.type === 'bomb';
+    const levelWeaponMul = isScaledWeapon ? 1 + (currentLevel - 1) * 0.15 : 1;
+
+    const scaledDamage = Math.round(towerData.damage * levelWeaponMul);
+    const scaledMinDamage = towerData.minDamage !== undefined ? Math.round(towerData.minDamage * levelWeaponMul) : undefined;
+    const scaledMaxDamage = towerData.maxDamage !== undefined ? Math.round(towerData.maxDamage * levelWeaponMul) : undefined;
+    const scaledSplashDamage = towerData.splashDamage ? Math.round(towerData.splashDamage * levelWeaponMul) : undefined;
+
     const newTower = {
       ...towerData,
+      damage: scaledDamage,
+      ...(scaledMinDamage !== undefined && { minDamage: scaledMinDamage, maxDamage: scaledMaxDamage }),
+      ...(scaledSplashDamage !== undefined && { splashDamage: scaledSplashDamage }),
       id: Math.random(),
       x: buildPreview.x,
       y: buildPreview.y,
@@ -990,6 +1002,7 @@ export const useGameStore = create((set, get) => ({
       isAntenna: towerData.isAntenna,
       isRocketSilo: towerData.isRocketSilo || false,
     };
+
 
     return {
       towers: [...towers, newTower],
