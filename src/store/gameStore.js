@@ -239,6 +239,65 @@ export const LEVELS_CONFIG = {
       { id: 'dec_4_2', type: 'obj2', x: 660, y: 440, size: 120 }
     ]
   },
+  5: {
+    // Сетка плиток 10x13 (60x60 px каждая) — 3 маршрута, сходящиеся на двух Т-перекрёстках
+    tileMap: [
+      [null, null, null, null, null, null, null, null, null, null, null, null, null],
+      // Верхний вход (row 1 -> y = 90)
+      [{ type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'corner', angle: 0 }, null, null, null, null, null],
+      [null, null, null, null, null, null, null, { type: 'straight', angle: 90 }, null, null, null, null, null],
+      // Центральный вход (row 3 -> y = 210) спускается на row 4
+      [{ type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'corner', angle: 0 }, null, null, null, { type: 'straight', angle: 90 }, null, null, null, null, null],
+      // Главная магистраль (row 4 -> y = 270): два Т-перекрёстка (col 7 и col 10) перед Базой
+      [null, null, null, { type: 'corner', angle: 180 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 't_junction', angle: 270 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 't_junction', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }],
+      [null, null, null, null, null, null, null, null, null, null, { type: 'straight', angle: 90 }, null, null],
+      // Нижняя дорога поднимается ко второму перекрёстку
+      [null, null, null, null, null, { type: 'corner', angle: 270 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'corner', angle: 90 }, null, null],
+      [null, null, null, null, null, { type: 'straight', angle: 90 }, null, null, null, null, null, null, null],
+      // Нижний вход (row 8 -> y = 510)
+      [{ type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'corner', angle: 90 }, null, null, null, null, null, null, null],
+      [null, null, null, null, null, null, null, null, null, null, null, null, null],
+    ],
+
+    // Физические рельсы строго по центрам плиток для всех трёх дорог
+    paths: [
+      // Путь 0: Верхний фланг
+      [
+        { x: 0, y: 90 },
+        { x: 450, y: 90 },
+        { x: 450, y: 270 },
+        { x: 630, y: 270 },
+        { x: 800, y: 270 }
+      ],
+      // Путь 1: Центральный прорыв
+      [
+        { x: 0, y: 210 },
+        { x: 210, y: 210 },
+        { x: 210, y: 270 },
+        { x: 450, y: 270 },
+        { x: 630, y: 270 },
+        { x: 800, y: 270 }
+      ],
+      // Путь 2: Нижний обходной путь
+      [
+        { x: 0, y: 510 },
+        { x: 330, y: 510 },
+        { x: 330, y: 390 },
+        { x: 630, y: 390 },
+        { x: 630, y: 270 },
+        { x: 800, y: 270 }
+      ]
+    ],
+
+    maxWaves: 10,
+    basePoint: { x: 800, y: 270 },
+    rocketPad: { x: 690, y: 120 },
+    decorations: [
+      { id: 'dec_5_1', type: 'obj1', x: 560, y: 150, size: 105 },
+      { id: 'dec_5_2', type: 'obj2', x: 150, y: 390, size: 115 }
+    ]
+  },
+
 
 
 };
@@ -516,7 +575,7 @@ export const useGameStore = create((set, get) => ({
       size: 52,
       bulletType: 'mlrs',
       splashRadius: 65,
-      splashDamage: 190,
+      splashDamage: 120,
       unlockLevel: 3,      // Открывается с 3-го уровня
       unlockWave: 1,
       rotationSpeed: 0.025,
@@ -607,6 +666,17 @@ export const useGameStore = create((set, get) => ({
         : []
     };
   }),
+
+
+  resetAllProgress: async () => {
+    await saveProgress(1, 0);
+    set({
+      currentLevel: 1,
+      savedScore: 0
+    });
+    get().restartGame();
+  },
+
 
 
 

@@ -14,32 +14,47 @@ export const GameCanvas = ({ isPaused }) => {
   const isAimingRocket = useGameStore((state) => state.isAimingRocket);
   const buyAndPlaceTower = useGameStore((state) => state.buyAndPlaceTower);
 
-  const handleMouseMove = (event) => {
+
+  // Универсальный пересчёт координат (работает и на ПК, и на мобильных, и при масштабировании)
+  const getCanvasCoords = (event) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
-    mousePosRef.current = {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    return {
+      x: (event.clientX - rect.left) * scaleX,
+      y: (event.clientY - rect.top) * scaleY
     };
   };
 
-  const handleMouseLeave = () => {
+  const handlePointerMove = (event) => {
+    // На ПК прицел плавно ездит за мышкой; на телефоне при тапе он сразу бьёт в точку нажатия
+    if (event.pointerType === 'mouse') {
+      const coords = getCanvasCoords(event);
+      if (coords) mousePosRef.current = coords;
+    }
+  };
+
+  const handlePointerLeave = () => {
     mousePosRef.current = null;
   };
 
-  const handleCanvasClick = (event) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const clickX = event.clientX - rect.left;
-    const clickY = event.clientY - rect.top;
+  const handlePointerDown = (event) => {
+    const coords = getCanvasCoords(event);
+    if (!coords) return;
 
-    mousePosRef.current = { x: clickX, y: clickY };
+    const clickX = coords.x;
+    const clickY = coords.y;
+
+    if (event.pointerType === 'mouse') {
+      mousePosRef.current = { x: clickX, y: clickY };
+    }
 
     const state = useGameStore.getState();
 
-    // --- РЕЖИМ НАВЕДЕНИЯ РАКЕТЫ ---
+    // --- РЕЖИМ НАВЕДЕНИЯ РАКЕТЫ (СРАБАТЫВАЕТ ПО ОДНОМУ КЛИКУ / ТАПУ) ---
     if (state.isAimingRocket) {
       let hitRoad = false;
 
@@ -52,6 +67,7 @@ export const GameCanvas = ({ isPaused }) => {
 
       if (hitRoad) {
         useGameStore.getState().launchRocket(clickX, clickY);
+        mousePosRef.current = null;
       } else {
         useGameStore.setState({
           damageTexts: [
@@ -72,7 +88,7 @@ export const GameCanvas = ({ isPaused }) => {
       return;
     }
 
-    // ПРОВЕРКА: Тапнули ли по лежащему на земле предмету?
+    // 1. Тапнули ли по лежащему на земле предмету?
     const clickedItem = state.droppedItems.find((item) => {
       const dist = Math.sqrt((clickX - item.x) ** 2 + (clickY - item.y) ** 2);
       return dist <= 22;
@@ -83,10 +99,10 @@ export const GameCanvas = ({ isPaused }) => {
       return;
     }
 
-    // 1. Если на экране активен призрак постройки башни
+    // 2. Если на экране активен призрак постройки башни
     if (state.buildPreview) {
       const p = state.buildPreview;
-      const btnRadius = 14;
+      const btnRadius = 16;
 
       const distOk = Math.sqrt((clickX - (p.x + 30)) ** 2 + (clickY - (p.y - 30)) ** 2);
       if (distOk <= btnRadius) {
@@ -101,7 +117,7 @@ export const GameCanvas = ({ isPaused }) => {
       }
     }
 
-    // 2. ПРОВЕРКА: Кликнули ли по уже построенной башне?
+    // 3. Кликнули ли по уже построенной башне?
     const clickedTower = state.towers.find((t) => {
       const dist = Math.sqrt((clickX - t.x) ** 2 + (clickY - t.y) ** 2);
       return dist <= 25;
@@ -112,17 +128,18 @@ export const GameCanvas = ({ isPaused }) => {
       return;
     }
 
-    // 3. Если меню башни открыто и мы кликнули на пустую траву — закрываем его
+    // 4. Если меню башни открыто и кликнули на пустую траву — закрываем его
     if (state.selectedTowerId && !state.selectedTowerType) {
       useGameStore.getState().closeTowerMenu();
       return;
     }
 
-    // Если мы в режиме выбора пушки из магазина и ткнули в траву — двигаем призрак
+    // 5. Если выбрана пушка из магазина и ткнули в траву — двигаем призрак
     if (state.selectedTowerType) {
       buyAndPlaceTower(clickX, clickY);
     }
   };
+
 
   const isPausedRef = useRef(isPaused);
   useEffect(() => {
@@ -206,12 +223,14 @@ export const GameCanvas = ({ isPaused }) => {
         drawer.drawExplosions(ctx, storeState.explosions);
         drawer.drawDamageTexts(ctx, storeState.damageTexts);
 
-        if (storeState.isAimingRocket && mousePosRef.current) {
+        if (storeState.isAimingRocket) {
           let isValidRoad = false;
-          for (let path of storeState.roadPaths) {
-            if (gameHelpers.checkIsOnRoad(mousePosRef.current.x, mousePosRef.current.y, path)) {
-              isValidRoad = true;
-              break;
+          if (mousePosRef.current) {
+            for (let path of storeState.roadPaths) {
+              if (gameHelpers.checkIsOnRoad(mousePosRef.current.x, mousePosRef.current.y, path)) {
+                isValidRoad = true;
+                break;
+              }
             }
           }
 
@@ -220,6 +239,7 @@ export const GameCanvas = ({ isPaused }) => {
 
           drawer.drawRocketAim(ctx, mousePosRef.current, isValidRoad, blastRadius);
         }
+
 
         drawer.drawUI(ctx, canvas, storeState.waveActive, storeState.waveTimer, storeState.gameOver);
 
@@ -241,17 +261,21 @@ export const GameCanvas = ({ isPaused }) => {
         ref={canvasRef}
         width={800}
         height={600}
-        onClick={handleCanvasClick}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerLeave={handlePointerLeave}
         style={{
           border: '1px solid #3e2723',
           borderRadius: '3px 0 0 3px',
           boxShadow: '0 10px 20px rgba(0,0,0,0.3)',
           cursor: isAimingRocket ? 'none' : 'pointer',
-          display: 'block'
+          display: 'block',
+          touchAction: 'none',
+          userSelect: 'none',
+          WebkitUserSelect: 'none'
         }}
       />
+
     </div>
   );
 };

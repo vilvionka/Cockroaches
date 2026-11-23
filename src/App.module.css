@@ -1970,3 +1970,176 @@
   color: #ffffff;
   border-color: rgba(255, 255, 255, 0.35);
 }
+
+
+/* =========================================================
+   МОДАЛКА ИНСТРУКТАЖА НА 1-М УРОВНЕ (ТУТОРИАЛ)
+   ========================================================= */
+.tutorial_overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 8, 14, 0.84);
+  backdrop-filter: blur(3px);
+  z-index: 64;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+  animation: fadeInOverlay 0.25s ease-out;
+}
+
+.tutorial_card {
+  width: 430px;
+  max-width: 94%;
+  background: linear-gradient(180deg, rgba(10, 19, 30, 0.98) 0%, rgba(5, 10, 15, 0.99) 100%);
+  border: 1px solid rgba(0, 229, 255, 0.5);
+  border-top: 2px solid #00e5ff;
+  border-bottom: 2px solid #ffd700;
+  border-radius: 4px;
+  padding: 18px 20px;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.95), inset 0 0 22px rgba(0, 229, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.tutorial_top_row {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.tutorial_title {
+  margin: 0 0 12px 0;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #ffffff;
+  text-shadow: 0 0 12px rgba(0, 229, 255, 0.45);
+}
+
+.tutorial_scheme_box {
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: rgba(0, 229, 255, 0.07);
+  border: 1px dashed rgba(0, 229, 255, 0.4);
+  border-radius: 3px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  color: #00e5ff;
+  letter-spacing: 1px;
+  box-sizing: border-box;
+}
+
+.tutorial_text {
+  margin: 0 0 14px 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #cfd8dc;
+}
+
+.tutorial_dots {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.tutorial_dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(100, 124, 148, 0.35);
+  transition: all 0.2s ease;
+}
+
+.tutorial_dot[data-active="true"] {
+  background: #00e5ff;
+  box-shadow: 0 0 8px #00e5ff;
+  transform: scale(1.2);
+}
+
+.tutorial_actions {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+}
+
+
+/* =========================================================
+   КНОПКА «НОВАЯ ИГРА» И ОКНО ПОДТВЕРЖДЕНИЯ НА СТАРТОВОМ ЭКРАНЕ
+   ========================================================= */
+.start_actions_col {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.start_play_btn {
+  min-width: 185px;
+  width: auto;
+  padding: 12px 22px;
+}
+
+.start_new_game_btn {
+  min-width: 185px;
+  padding: 8px 18px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #b0bec5;
+  background: rgba(10, 19, 30, 0.75);
+  border: 1px solid rgba(255, 82, 82, 0.4);
+  border-radius: 3px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.start_new_game_btn:hover {
+  color: #ffffff;
+  background: rgba(255, 82, 82, 0.2);
+  border-color: #ff5252;
+  box-shadow: 0 0 14px rgba(255, 82, 82, 0.35);
+}
+
+.start_confirm_overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 210;
+  background: rgba(4, 8, 14, 0.88);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+  animation: fadeInOverlay 0.2s ease-out;
+}
+
+.start_confirm_card {
+  width: 370px;
+  max-width: 94%;
+  background: linear-gradient(180deg, rgba(16, 14, 22, 0.98) 0%, rgba(6, 10, 16, 0.99) 100%);
+  border: 1px solid rgba(255, 82, 82, 0.5);
+  border-top: 2px solid #ff5252;
+  border-bottom: 2px solid #00e5ff;
+  border-radius: 4px;
+  padding: 18px 20px;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-sizing: border-box;
+}

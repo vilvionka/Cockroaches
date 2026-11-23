@@ -1229,77 +1229,99 @@ export const drawNetworkConnectionsHud = (ctx, networkGraph) => {
 };
 
 // --- ОТРИСОВКА ТАКТИЧЕСКОГО ПРИЦЕЛА ДЛЯ РАКЕТНОЙ ШАХТЫ ---
+// --- ОТРИСОВКА ТАКТИЧЕСКОГО ПРИЦЕЛА И ПЛАШКИ НАВЕДЕНИЯ ДЛЯ РАКЕТНОЙ ШАХТЫ ---
 export const drawRocketAim = (ctx, aimPos, isValidTarget, blastRadius = 65) => {
-  if (!aimPos) return;
-
-  const { x, y } = aimPos;
-  const color = isValidTarget ? '#00E5FF' : '#FF5252';
-  const fillBg = isValidTarget ? 'rgba(0, 229, 255, 0.12)' : 'rgba(255, 82, 82, 0.14)';
-
   ctx.save();
-  ctx.translate(x, y);
 
-  // 1. Зона будущего поражения (радиус взрыва)
-  ctx.beginPath();
-  ctx.arc(0, 0, blastRadius, 0, Math.PI * 2);
-  ctx.fillStyle = fillBg;
-  ctx.fill();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.setLineDash([8, 6]);
-  ctx.stroke();
-  ctx.setLineDash([]);
+  // 1. ВЕРХНЯЯ ТАКТИЧЕСКАЯ ПЛАШКА-ПОДСКАЗКА (видна и на ПК, и на мобильных)
+  const bannerW = 340;
+  const bannerH = 28;
+  const bannerX = (800 - bannerW) / 2;
+  const bannerY = 62; // Сразу под верхним HUD
 
-  // 2. Вращающееся внутреннее кольцо прицела
-  const rot = (Date.now() / 600) % (Math.PI * 2);
-  ctx.save();
-  ctx.rotate(rot);
-  ctx.beginPath();
-  ctx.arc(0, 0, 18, 0, Math.PI * 2);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  const pulseAlpha = 0.75 + Math.sin(Date.now() / 180) * 0.25;
 
-  // 4 тактические засечки по кругу
-  for (let i = 0; i < 4; i++) {
-    ctx.rotate(Math.PI / 2);
-    ctx.beginPath();
-    ctx.moveTo(14, 0);
-    ctx.lineTo(24, 0);
-    ctx.stroke();
-  }
-  ctx.restore();
+  ctx.fillStyle = 'rgba(6, 14, 24, 0.92)';
+  ctx.fillRect(bannerX, bannerY, bannerW, bannerH);
 
-  // 3. Перекрестие или знак запрета в центре
-  if (isValidTarget) {
-    // Центральная точка наведения
-    ctx.fillStyle = '#FF3D00';
-    ctx.beginPath();
-    ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
-    ctx.fill();
-  } else {
-    // Диагональная черта запрета поверх внутреннего круга
-    ctx.beginPath();
-    ctx.moveTo(-12, -12);
-    ctx.lineTo(12, 12);
-    ctx.strokeStyle = '#FF5252';
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-  }
+  ctx.strokeStyle = `rgba(0, 229, 255, ${pulseAlpha})`;
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(bannerX, bannerY, bannerW, bannerH);
 
-  // 4. Подпись под прицелом
-  ctx.font = 'bold 10px "Orbitron", Arial';
+  ctx.font = 'bold 11px "Orbitron", Arial';
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = '#000000';
-  const label = isValidTarget ? 'УДАР РАЗРЕШЁН' : 'ТОЛЬКО ПО ДОРОГЕ';
-  ctx.strokeText(label, 0, 28);
-  ctx.fillStyle = color;
-  ctx.fillText(label, 0, 28);
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#00E5FF';
+  ctx.fillText('🎯 ТАПНИТЕ ПО ДОРОГЕ ДЛЯ УДАРА', 400, bannerY + bannerH / 2);
+
+  // 2. САМ ПРИЦЕЛ ПОД КУРСОРОМ (рисуется на ПК при движении мыши)
+  if (aimPos) {
+    const { x, y } = aimPos;
+    const color = isValidTarget ? '#00E5FF' : '#FF5252';
+    const fillBg = isValidTarget ? 'rgba(0, 229, 255, 0.12)' : 'rgba(255, 82, 82, 0.14)';
+
+    ctx.translate(x, y);
+
+    // Зона будущего поражения (радиус взрыва)
+    ctx.beginPath();
+    ctx.arc(0, 0, blastRadius, 0, Math.PI * 2);
+    ctx.fillStyle = fillBg;
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 6]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Вращающееся внутреннее кольцо прицела
+    const rot = (Date.now() / 600) % (Math.PI * 2);
+    ctx.save();
+    ctx.rotate(rot);
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    for (let i = 0; i < 4; i++) {
+      ctx.rotate(Math.PI / 2);
+      ctx.beginPath();
+      ctx.moveTo(14, 0);
+      ctx.lineTo(24, 0);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Перекрестие или знак запрета в центре
+    if (isValidTarget) {
+      ctx.fillStyle = '#FF3D00';
+      ctx.beginPath();
+      ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(-12, -12);
+      ctx.lineTo(12, 12);
+      ctx.strokeStyle = '#FF5252';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    }
+
+    // Подпись под прицелом
+    ctx.font = 'bold 10px "Orbitron", Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#000000';
+    const label = isValidTarget ? 'УДАР РАЗРЕШЁН' : 'ТОЛЬКО ПО ДОРОГЕ';
+    ctx.strokeText(label, 0, 28);
+    ctx.fillStyle = color;
+    ctx.fillText(label, 0, 28);
+  }
 
   ctx.restore();
 };
+
 
 
 

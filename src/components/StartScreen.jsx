@@ -7,6 +7,10 @@ import styles from '../App.module.css';
 export const StartScreen = ({ onStartGame }) => {
   const [progress, setProgress] = useState(0);
   const [isReady, setIsReady] = useState(false);
+  const [hasSavedProgress, setHasSavedProgress] = useState(false);
+  const [savedLevelNum, setSavedLevelNum] = useState(1);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -33,6 +37,10 @@ export const StartScreen = ({ onStartGame }) => {
       const saved = await loadProgress();
       if (saved.savedLevel > 1) {
         useGameStore.getState().applySavedLevel(saved.savedLevel, saved.savedScore);
+        if (isMounted) {
+          setHasSavedProgress(true);
+          setSavedLevelNum(saved.savedLevel);
+        }
       }
 
       if (isMounted) {
@@ -48,14 +56,22 @@ export const StartScreen = ({ onStartGame }) => {
   }, []);
 
   const handlePlayClick = () => {
-    // По требованиям Яндекс Игр сообщаем о старте геймплея
+    window.ysdk?.features?.GameplayAPI?.start();
+    onStartGame();
+  };
+
+  const handleConfirmNewGame = async () => {
+    if (isResetting) return;
+    setIsResetting(true);
+    await useGameStore.getState().resetAllProgress();
+    setIsResetting(false);
+    setShowResetConfirm(false);
     window.ysdk?.features?.GameplayAPI?.start();
     onStartGame();
   };
 
   return (
     <div className={styles.start_overlay}>
-      {/* Фоновый постер (положите файл poster.jpg в папку public) */}
       <div
         className={styles.start_poster_bg}
         style={{ backgroundImage: "url('./poster.jpg')" }}
@@ -79,13 +95,56 @@ export const StartScreen = ({ onStartGame }) => {
             </div>
           </div>
         ) : (
-          <div className={styles.start_actions}>
+          <div className={styles.start_actions_col}>
             <button onClick={handlePlayClick} className={styles.start_play_btn}>
-              Играть
+              {hasSavedProgress ? `Продолжить (Ур. ${savedLevelNum})` : 'Играть'}
             </button>
+
+            {hasSavedProgress && (
+              <button
+                type="button"
+                onClick={() => setShowResetConfirm(true)}
+                className={styles.start_new_game_btn}
+              >
+                Новая игра
+              </button>
+            )}
           </div>
         )}
       </div>
+
+      {/* Окно подтверждения сброса прогресса */}
+      {showResetConfirm && (
+        <div className={styles.start_confirm_overlay}>
+          <div className={styles.start_confirm_card}>
+            <div className={styles.emergency_badge}>ВНИМАНИЕ // ОЧИСТКА ДАННЫХ</div>
+            <h2 className={styles.pause_title} style={{ fontSize: '18px', marginBottom: '8px' }}>
+              НАЧАТЬ НОВУЮ ИГРУ?
+            </h2>
+            <p className={styles.emergency_desc}>
+              Текущий прогресс уровней и набранные очки будут сброшены, а кампания начнётся с 1-го уровня.
+            </p>
+            <div className={styles.confirm_btn_row}>
+              <button
+                type="button"
+                disabled={isResetting}
+                onClick={handleConfirmNewGame}
+                className={styles.confirm_yes_btn}
+              >
+                {isResetting ? 'СБРОС...' : 'ДА, СБРОСИТЬ'}
+              </button>
+              <button
+                type="button"
+                disabled={isResetting}
+                onClick={() => setShowResetConfirm(false)}
+                className={styles.confirm_no_btn}
+              >
+                ОТМЕНА
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

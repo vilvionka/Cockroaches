@@ -21,7 +21,9 @@ export const TowerControls = () => {
   // Флаги типов
   const isRocket = activeTower.isRocketSilo || activeTower.type === 'silo';
   const isAntenna = activeTower.isAntenna;
+  const isMlrs = activeTower.type === 'mlrs';
   const isStandardGun = !isRocket && !isAntenna;
+
 
   // Математика урона ракеты
   let rocketDamage = Math.round(1000 * Math.pow(1.2, currentLvl - 1));
@@ -134,7 +136,7 @@ export const TowerControls = () => {
       )}
 
       {/* Блок активации бустов (Скрыт для ракет и антенн) */}
-      {isStandardGun && (
+      {isStandardGun && !isMlrs && (
         <>
           <div className={styles.bar_gun}>Активировать усилитель:</div>
           <div className={styles.boosts_grid}>

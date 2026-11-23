@@ -12,6 +12,7 @@ import { SupplyDropModal } from './components/SupplyDropModal';
 import { EmergencyStrikeModal } from './components/EmergencyStrikeModal';
 import { showFullscreenAd } from './utils/yandexAds';
 import { UnlockWeaponModal } from './components/UnlockWeaponModal';
+import { TutorialModal } from './components/TutorialModal';
 import styles from './App.module.css';
 
 function App() {
@@ -50,6 +51,7 @@ function App() {
           <LevelCompleteModal />
           <UnlockWeaponModal />
           <SupplyDropModal />
+          <TutorialModal gameStarted={gameStarted} />
           <EmergencyStrikeModal />
         </div>
 
