@@ -303,6 +303,39 @@ export const LEVELS_CONFIG = {
 };
 
 
+export const MAP_OFFSET_X = 120; // Сдвиг карты вправо на 2 плитки (60 * 2 = 120 px) для Canvas 920x600
+
+export const getShiftedLevelData = (levelNum) => {
+  const cfg = LEVELS_CONFIG[levelNum] || LEVELS_CONFIG[1];
+
+  const paths = cfg.paths.map((path) => {
+    const shifted = path.map((pt) => ({ x: pt.x + MAP_OFFSET_X, y: pt.y }));
+    // Продлеваем вход с самого левого края экрана (x = 0) до сдвинутого начала дороги
+    if (shifted.length > 0 && shifted[0].x > 0) {
+      return [{ x: 0, y: shifted[0].y }, ...shifted];
+    }
+    return shifted;
+  });
+
+  const basePoint = {
+    x: cfg.basePoint.x + MAP_OFFSET_X,
+    y: cfg.basePoint.y
+  };
+
+  const rocketPad = cfg.rocketPad
+    ? { x: cfg.rocketPad.x + MAP_OFFSET_X, y: cfg.rocketPad.y }
+    : null;
+
+  const decorations = (cfg.decorations || []).map((dec) => ({
+    ...dec,
+    x: dec.x + MAP_OFFSET_X
+  }));
+
+  return { paths, basePoint, rocketPad, decorations, maxWaves: cfg.maxWaves };
+};
+
+
+
 
 
 
@@ -364,6 +397,7 @@ export const useGameStore = create((set, get) => ({
   isUserPaused: false,
   isEmergencyAdOpen: false,
   emergencyStrikeUsed: false,
+  emergencyCooldown: 0,
   emergencyTarget: null,
   savedScore: 0,
   unlockedWeaponModal: null,
@@ -658,7 +692,7 @@ export const useGameStore = create((set, get) => ({
       gold: calculatedGold,
       isSupplyDropOpen: true,
       bonusTowerLimits: { gun: 0, bomb: 0, frost: 0, mlrs: 0 },
-      emergencyStrikeUsed: false, isEmergencyAdOpen: false, emergencyTarget: null,
+      emergencyStrikeUsed: false, isEmergencyAdOpen: false, emergencyTarget: null, emergencyCooldown: 0,
       score: savedScore,
       savedScore: savedScore,
       decorations: LEVELS_CONFIG[validLevel].decorations
@@ -1263,6 +1297,7 @@ export const useGameStore = create((set, get) => ({
       emergencyStrikeUsed: false,
       isEmergencyAdOpen: false,
       emergencyTarget: null,
+      emergencyCooldown: 0,
       activeHoleIndex: null,
       isUserPaused: false,
       waveActive: false,
@@ -1397,6 +1432,7 @@ export const useGameStore = create((set, get) => ({
       explosions: initialExplosions,
       activeHoleIndex: holeIndex,
       emergencyStrikeUsed: false,
+      emergencyCooldown: 0,
       activeHolePathIndex: holePathIndex
     };
   }),
@@ -1418,7 +1454,7 @@ export const useGameStore = create((set, get) => ({
       cakeHp: 100,
       waveTimer: 900,
       waveActive: false,
-      emergencyStrikeUsed: false, isEmergencyAdOpen: false, emergencyTarget: null,
+      emergencyStrikeUsed: false, isEmergencyAdOpen: false, emergencyTarget: null, emergencyCooldown: 0,
       gameOver: false,
       score: state.savedScore || 0,
       isUserPaused: false,
@@ -1524,6 +1560,7 @@ export const useGameStore = create((set, get) => ({
       state.activeHoleIndex = holeIndex;
       state.activeHolePathIndex = holePathIndex;
       state.emergencyStrikeUsed = false;
+      state.emergencyCooldown = 0;
 
       let autoExplosions = [];
       if (holeIndex !== null) {
@@ -1798,11 +1835,22 @@ export const useGameStore = create((set, get) => ({
     if (nextShieldFlash > 0) nextShieldFlash -= 1;
 
 
-    // Проверка угрозы прорыва базы (1 раз за волну, если HP базы < 30% и враг ближе 120 px)
+    // Уменьшаем кулдаун повторного предложения удара за рекламу
+    let nextEmergencyCooldown = state.emergencyCooldown || 0;
+    if (nextEmergencyCooldown > 0) nextEmergencyCooldown -= 1;
+
+    // Проверка угрозы прорыва базы (если удар ещё не использован в этой волне и прошёл кулдаун отказа)
     const maxHp = state.maxCakeHp || 100;
     const isLowHp = movementData.cakeHp > 0 && movementData.cakeHp < maxHp * 0.3;
 
-    if (!state.emergencyStrikeUsed && !state.isEmergencyAdOpen && state.waveActive && isLowHp && finalAliveEnemies.length > 0) {
+    if (
+      !state.emergencyStrikeUsed &&
+      nextEmergencyCooldown === 0 &&
+      !state.isEmergencyAdOpen &&
+      state.waveActive &&
+      isLowHp &&
+      finalAliveEnemies.length > 0
+    ) {
       const basePt = LEVELS_CONFIG[state.currentLevel]?.basePoint || { x: 800, y: 270 };
       let closestThreat = null;
       let minDist = Infinity;
@@ -1833,11 +1881,13 @@ export const useGameStore = create((set, get) => ({
           scorches: nextScorches,
           slimeTrails: finalSlimeTrails,
           shieldFlashTimer: nextShieldFlash,
+          emergencyCooldown: 0,
           isEmergencyAdOpen: true,
           emergencyTarget: { x: closestThreat.x, y: closestThreat.y }
         };
       }
     }
+
 
 
     // =========================================================================
@@ -1951,6 +2001,7 @@ export const useGameStore = create((set, get) => ({
       decorations: state.decorations,
       scorches: nextScorches,
       slimeTrails: finalSlimeTrails,
+      emergencyCooldown: nextEmergencyCooldown,
       shieldFlashTimer: nextShieldFlash
     };
 
@@ -2020,6 +2071,7 @@ export const useGameStore = create((set, get) => ({
     set({
       isEmergencyAdOpen: false,
       emergencyStrikeUsed: true,
+      emergencyCooldown: 360,
       emergencyTarget: null
     });
   },

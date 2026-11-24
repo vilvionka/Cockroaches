@@ -209,6 +209,15 @@ export const GameCanvas = ({ isPaused }) => {
         const baseConnectionsCount = baseNode ? baseNode.connectedIds.length : 0;
 
         drawer.drawNetworkLines(ctx, graph, storeState.buildPreview, storeState.selectedTowerType);
+        drawer.drawBuildZones(
+          ctx,
+          storeState.roadPaths,
+          graph,
+          storeState.towers,
+          storeState.selectedTowerType,
+          storeState.buildPreview
+        );
+
         drawer.drawNetworkConnectionsHud(ctx, graph);
         drawer.drawCake(ctx, cakePoint, storeState.cakeHp, storeState.maxCakeHp, assets, baseConnectionsCount);
         drawer.drawBaseShield(ctx, cakePoint, storeState.shieldFlashTimer);

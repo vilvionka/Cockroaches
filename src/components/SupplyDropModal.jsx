@@ -152,7 +152,7 @@ export const SupplyDropModal = () => {
 
   return (
     <div className={styles.supply_overlay}>
-      <div className={styles.supply_modal}>
+      <div className={styles.supply_modal} style={{ backgroundImage: "url('./drop.jpg')" }}>
         <div className={styles.lvl_complete_badge}>СЕКТОР {currentLevel} // ОРБИТАЛЬНЫЙ СБРОС</div>
         <h2 className={styles.supply_title}>ВЫБЕРИТЕ КОНТЕЙНЕР СНАБЖЕНИЯ</h2>
         <p className={styles.supply_subtitle}>

@@ -126,18 +126,18 @@ export const drawCake = (ctx, cakePoint, cakeHp, maxCakeHp, assets, baseConnecti
 
 
 
-// --- ИСПРАВЛЕННЫЙ ОТРЕНДЕР БАШЕН С БЕЗОПАСНЫМИ ТЕНЯМИ И ФИКСOМ РАЗМЫТИЯ ЭКРАНА ---
+// --- ОТРЕНДЕР БАШЕН С УМНЫМ ПОЗИЦИОНИРОВАНИЕМ LVL И ТАЙМЕРАМИ УСИЛИТЕЛЕЙ ---
 export const drawTowers = (ctx, towers) => {
   const safeTowers = towers || [];
 
-  // Достаем ID выбранной башни из хранилища Zustand напрямую
-  const selectedTowerId = useGameStore.getState().selectedTowerId;
+  const storeState = useGameStore.getState();
+  const selectedTowerId = storeState.selectedTowerId;
+  const roadPaths = storeState.roadPaths || [];
 
   safeTowers.forEach((tower) => {
     const isFocused = tower.id === selectedTowerId;
 
-    // 1. Если по башне тапнули — подсвечиваем её радиус стрельбы
-    // 1. Если по башне тапнули — подсвечиваем её радиус стрельбы
+    // 1. Если по башне тапнули — подсвечиваем её зону обстрела
     if (isFocused) {
       ctx.save();
 
@@ -146,31 +146,40 @@ export const drawTowers = (ctx, towers) => {
         visualRange = Math.round(tower.range * 1.5);
       }
 
-      // Внешний радиус поражения
-      ctx.beginPath();
-      ctx.arc(tower.x, tower.y, visualRange, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0, 229, 255, 0.06)';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(0, 229, 255, 0.45)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      // Если есть мёртвая зона (РСЗО) — рисуем внутренний запретный круг
       if (tower.minRange) {
+        // Для РСЗО: заливаем ТОЛЬКО рабочее кольцо между minRange и visualRange (правило evenodd)
+        ctx.beginPath();
+        ctx.arc(tower.x, tower.y, visualRange, 0, Math.PI * 2, false);
+        ctx.arc(tower.x, tower.y, tower.minRange, 0, Math.PI * 2, true);
+        ctx.fillStyle = 'rgba(0, 229, 255, 0.12)';
+        ctx.fill('evenodd');
+
+        // Чёткая внешняя граница зоны обстрела
+        ctx.beginPath();
+        ctx.arc(tower.x, tower.y, visualRange, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0, 229, 255, 0.75)';
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+
+        // Чёткая внутренняя граница зоны обстрела
         ctx.beginPath();
         ctx.arc(tower.x, tower.y, tower.minRange, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 82, 82, 0.12)';
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 82, 82, 0.6)';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([6, 4]);
+        ctx.strokeStyle = 'rgba(0, 229, 255, 0.75)';
+        ctx.lineWidth = 1.8;
         ctx.stroke();
-        ctx.setLineDash([]);
+      } else {
+        // Для остальных башен — обычный сплошной круг радиуса
+        ctx.beginPath();
+        ctx.arc(tower.x, tower.y, visualRange, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0, 229, 255, 0.08)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0, 229, 255, 0.55)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
       }
 
       ctx.restore();
     }
-
 
     if (tower.minRange) {
       ctx.beginPath();
@@ -183,8 +192,7 @@ export const drawTowers = (ctx, towers) => {
       ctx.setLineDash([]);
     }
 
-
-    // --- 2. ЛЁГКАЯ ТЕНЬ ОТ БАШНИ (БЕЗ ctx.filter) ---
+    // --- 2. ЛЁГКАЯ ТЕНЬ ОТ БАШНИ ---
     ctx.save();
     ctx.beginPath();
     ctx.arc(tower.x + 1, tower.y + 1, tower.size / 2.1, 0, Math.PI * 2);
@@ -196,7 +204,6 @@ export const drawTowers = (ctx, towers) => {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
     ctx.fill();
     ctx.restore();
-
 
     // --- 3. РАСЧЕТ ОТДАЧИ И ОТРИСОВКА СПРАЙТА БАШНИ ---
     ctx.save();
@@ -211,11 +218,7 @@ export const drawTowers = (ctx, towers) => {
 
     if (towerAsset?.loaded) {
       const offsetX = -tower.size / 2;
-
-      // Если это ракетная шахта (silo), центрируем её строго по центру (0.5).
-      // Для остальных оборонительных башен сохраняем ваш рабочий сдвиг 0.58.
       const offsetY = tower.isRocketSilo ? -tower.size / 2 : -tower.size * 0.58;
-
       ctx.drawImage(towerAsset.img, offsetX, offsetY, tower.size, tower.size);
     } else {
       ctx.fillStyle = tower.type === 'bomb' ? '#FF9800' : tower.type === 'frost' ? '#00BCD4' : '#1E88E5';
@@ -223,57 +226,156 @@ export const drawTowers = (ctx, towers) => {
     }
     ctx.restore();
 
-    // --- 4. ОТРИСОВКА МЕТКИ УРОВНЯ БАШНИ (Прямо под ней) ---
+    // Определяем, стоит ли башня НАД ближайшей дорогой или ПОД ней
+    let isAboveRoad = false;
+    let minRoadDist = Infinity;
+    for (let path of roadPaths) {
+      for (let i = 0; i < path.length - 1; i++) {
+        const p1 = path[i];
+        const p2 = path[i + 1];
+        const A = tower.x - p1.x;
+        const B = tower.y - p1.y;
+        const C = p2.x - p1.x;
+        const D = p2.y - p1.y;
+        const dot = A * C + B * D;
+        const lenSq = C * C + D * D;
+        const param = lenSq !== 0 ? Math.max(0, Math.min(1, dot / lenSq)) : 0;
+        const cx = p1.x + param * C;
+        const cy = p1.y + param * D;
+        const dist = Math.sqrt((tower.x - cx) ** 2 + (tower.y - cy) ** 2);
+        if (dist < minRoadDist) {
+          minRoadDist = dist;
+          isAboveRoad = tower.y < cy;
+        }
+      }
+    }
+
+    // --- 4. ОТРИСОВКА МЕТКИ УРОВНЯ БАШНИ (Сверху если над дорогой, снизу если под дорогой) ---
     if (!tower.isAntenna) {
       ctx.save();
       const currentLevel = tower.level || 1;
+      const isMaxLevel = currentLevel >= 5;
+
       ctx.font = 'bold 9px "Orbitron", Arial';
       ctx.textAlign = 'center';
-      ctx.fillStyle = isFocused ? '#00e5ff' : 'rgba(255, 255, 255, 0.7)';
+
+      // На 5-м уровне цвет янтарно-оранжевый (#FF9800), как у антенн при полном комплекте подключений
+      if (isMaxLevel) {
+        ctx.fillStyle = '#FF9800';
+      } else if (isFocused) {
+        ctx.fillStyle = '#00e5ff';
+      } else {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.78)';
+      }
+
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 2.5;
 
-      const labelY = tower.y + tower.size / 2 + 10;
+      // Если башня над дорогой — пишем сверху; если под дорогой — пишем снизу
+      const labelY = isAboveRoad
+        ? tower.y - tower.size / 2 - 5
+        : tower.y + tower.size / 2 + 11;
+
       ctx.strokeText(`LVL ${currentLevel}`, tower.x, labelY);
       ctx.fillText(`LVL ${currentLevel}`, tower.x, labelY);
       ctx.restore();
     }
 
-    // --- 5. ОТРИСОВКА ИНДИКАТOРА СТРОИТЕЛЬСТВА / АПГРЕЙДА ---
+    // --- 5. ОТРИСОВКА ИНДИКАТОРА СТРОИТЕЛЬСТВА / АПГРЕЙДА ---
     if (tower.underConstruction && tower.constructionTimer > 0) {
       ctx.save();
       const barW = 44;
       const barH = 5;
       const barX = tower.x - barW / 2;
-      const barY = tower.y - tower.size / 2 - 12;
+      const barY = isAboveRoad
+        ? tower.y - tower.size / 2 - 19
+        : tower.y - tower.size / 2 - 12;
 
-      // Задний фон полоски (серый)
       ctx.fillStyle = 'rgba(20, 30, 40, 0.75)';
       ctx.fillRect(barX, barY, barW, barH);
 
-      // Рассчитываем процент готовности
       const progress = 1 - (tower.constructionTimer / tower.maxConstructionTime);
-
-      // Цвет: оранжевый для апгрейда, бирюзовый для новой постройки
       ctx.fillStyle = tower.constructionType === 'upgrade' ? '#FF9800' : '#00e5ff';
       ctx.fillRect(barX, barY, barW * progress, barH);
 
-      // Обводка полоски прогресса
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 1;
       ctx.strokeRect(barX, barY, barW, barH);
       ctx.restore();
     }
 
+    // --- 6. ИНДИКАТОРЫ АКТИВНЫХ УСИЛИТЕЛЕЙ (БУСТОВ) С КРУГОВЫМ ТАЙМЕРОМ ---
+    if (tower.activeBoosts) {
+      const boostConfigs = [
+        { key: 'damage', letter: 'D', color: '#FF5252' },
+        { key: 'fireRate', letter: 'F', color: '#FF9800' },
+        { key: 'range', letter: 'R', color: '#00E5FF' }
+      ];
 
-    // --- 6. ИНДИКАТОР ЗАРЯДКИ РАКЕТНОЙ ШАХТЫ НАД БАШНЕЙ ---
+      const activeList = boostConfigs.filter((b) => (tower.activeBoosts[b.key] || 0) > 0);
+
+      if (activeList.length > 0) {
+        ctx.save();
+        const badgeRadius = 7.5;
+        const spacing = 18;
+        const totalWidth = (activeList.length - 1) * spacing;
+        const startX = tower.x - totalWidth / 2;
+
+        // Размещаем значки бустов с противоположной от текста LVL стороны (дальше от дороги)
+        const badgesY = isAboveRoad
+          ? tower.y - tower.size / 2 - 20
+          : tower.y + tower.size / 2 + 22;
+
+        activeList.forEach((b, idx) => {
+          const timeLeft = tower.activeBoosts[b.key];
+          const ratio = Math.max(0, Math.min(1, timeLeft / 600)); // 600 кадров = 10 сек
+          const bx = startX + idx * spacing;
+
+          // Тёмная подложка значка
+          ctx.beginPath();
+          ctx.arc(bx, badgesY, badgeRadius, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(6, 12, 20, 0.9)';
+          ctx.fill();
+
+          // Тусклый фоновый ободок
+          ctx.beginPath();
+          ctx.arc(bx, badgesY, badgeRadius, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          // Яркая дуга оставшегося времени (убывает по часовой стрелке)
+          ctx.beginPath();
+          ctx.arc(
+            bx,
+            badgesY,
+            badgeRadius,
+            -Math.PI / 2,
+            -Math.PI / 2 + Math.PI * 2 * ratio
+          );
+          ctx.strokeStyle = b.color;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // Буква усилителя в центре (D, F или R)
+          ctx.font = 'bold 8px "Orbitron", Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = b.color;
+          ctx.fillText(b.letter, bx, badgesY + 0.5);
+        });
+
+        ctx.restore();
+      }
+    }
+
+    // --- 7. ИНДИКАТОР ЗАРЯДКИ РАКЕТНОЙ ШАХТЫ НАД БАШНЕЙ ---
     if (tower.isRocketSilo && !tower.underConstruction) {
       ctx.save();
       const markerY = tower.y - tower.size / 2 - 14;
       const isReady = (tower.ammoReady || 0) > 0;
 
       if (isReady) {
-        // Пульсирующая надпись "ГОТОВ!"
         const pulse = 0.8 + Math.sin(Date.now() / 180) * 0.2;
         ctx.globalAlpha = pulse;
         ctx.font = 'bold 10px "Orbitron", Arial';
@@ -285,13 +387,11 @@ export const drawTowers = (ctx, towers) => {
         ctx.fillStyle = '#00e5ff';
         ctx.fillText('ГОТОВ!', tower.x, markerY);
       } else {
-        // Заполняющийся кружочек зарядки (макс. время зарядки = 1500 кадров)
         const maxCharge = 1500;
         const chargeLeft = tower.chargeTimer ?? maxCharge;
         const progress = Math.min(1, Math.max(0, 1 - chargeLeft / maxCharge));
         const radius = 9;
 
-        // Тёмная подложка кружка
         ctx.beginPath();
         ctx.arc(tower.x, markerY, radius, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(6, 12, 20, 0.88)';
@@ -300,7 +400,6 @@ export const drawTowers = (ctx, towers) => {
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        // Заполняющийся сектор (от -90 градусов по часовой стрелке)
         if (progress > 0) {
           ctx.beginPath();
           ctx.moveTo(tower.x, markerY);
@@ -316,7 +415,6 @@ export const drawTowers = (ctx, towers) => {
           ctx.fill();
         }
 
-        // Тонкий внешний ободок прогресса
         ctx.beginPath();
         ctx.arc(
           tower.x,
@@ -332,10 +430,9 @@ export const drawTowers = (ctx, towers) => {
 
       ctx.restore();
     }
-
-
   });
 };
+
 
 
 
@@ -557,20 +654,42 @@ export const drawRoadHole = (ctx, activeHoleIndex, roadPaths, activeHolePathInde
 export const drawBuildPreview = (ctx, preview, assets) => {
   if (!preview) return;
 
-
   const previewConfig = useGameStore.getState().towerTypes?.[preview.type];
-  if (previewConfig?.minRange) {
-    ctx.save();
+  const minRange = previewConfig?.minRange || 0;
+
+  // 1. Рисуем зону обстрела призрака башни
+  ctx.save();
+  if (minRange > 0) {
+    // Для РСЗО: подсвечиваем только кольцо между внутренним и внешним радиусом
     ctx.beginPath();
-    ctx.arc(preview.x, preview.y, previewConfig.minRange, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 82, 82, 0.1)';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 82, 82, 0.55)';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([5, 5]);
+    ctx.arc(preview.x, preview.y, preview.range, 0, Math.PI * 2, false);
+    ctx.arc(preview.x, preview.y, minRange, 0, Math.PI * 2, true);
+    ctx.fillStyle = 'rgba(0, 229, 255, 0.12)';
+    ctx.fill('evenodd');
+
+    // Чёткие границы кольца обстрела
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.7)';
+    ctx.lineWidth = 1.6;
+
+    ctx.beginPath();
+    ctx.arc(preview.x, preview.y, preview.range, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.restore();
+
+    ctx.beginPath();
+    ctx.arc(preview.x, preview.y, minRange, 0, Math.PI * 2);
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.arc(preview.x, preview.y, preview.range, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0, 229, 255, 0.08)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.45)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    ctx.stroke();
   }
+  ctx.restore();
+
 
 
   // 1. Рисуем бирюзовый круг радиуса действия башни
@@ -1321,6 +1440,132 @@ export const drawRocketAim = (ctx, aimPos, isValidTarget, blastRadius = 65) => {
 
   ctx.restore();
 };
+
+// --- ПОДСВЕТКА ДОСТУПНЫХ ПОСАДОЧНЫХ ЗОН ВДОЛЬ ДОРОГИ И НА ВНЕШНИХ ИЗГИБАХ ---
+export const drawBuildZones = (ctx, roadPaths, networkGraph, towers, selectedTowerType, buildPreview) => {
+  const activeType = buildPreview?.type || selectedTowerType;
+  if (!activeType || activeType === 'silo' || !roadPaths || !networkGraph) return;
+
+  const availableNodes = networkGraph.filter(
+    (node) => node.isActive && (node.id === 'base' || node.isAntenna) && node.connectedIds.length < node.maxConnections
+  );
+  if (availableNodes.length === 0) return;
+
+  const firstPath = roadPaths || [];
+  const cakePoint = firstPath[firstPath.length - 1] || { x: 800, y: 270 };
+  const targetOffset = 53;
+  const step = 12;
+
+  const validSpots = [];
+
+  // Общая проверка точки на доступность для строительства
+  const tryAddSpot = (sx, sy, angle) => {
+    if (sx < 28 || sx > 772 || sy < 28 || sy > 572) return;
+
+    const inNetwork = availableNodes.some(
+      (n) => Math.hypot(sx - n.x, sy - n.y) <= n.range
+    );
+    if (!inNetwork) return;
+
+    if (
+      sx >= cakePoint.x - 85 &&
+      sy >= cakePoint.y - 85 &&
+      sy <= cakePoint.y + 85
+    ) {
+      return;
+    }
+
+    for (let checkPath of roadPaths) {
+      for (let j = 0; j < checkPath.length - 1; j++) {
+        const cp1 = checkPath[j];
+        const cp2 = checkPath[j + 1];
+        const cA = sx - cp1.x;
+        const cB = sy - cp1.y;
+        const cC = cp2.x - cp1.x;
+        const cD = cp2.y - cp1.y;
+        const lenSq = cC * cC + cD * cD;
+        const param = lenSq !== 0 ? Math.max(0, Math.min(1, (cA * cC + cB * cD) / lenSq)) : 0;
+        const cx = cp1.x + param * cC;
+        const cy = cp1.y + param * cD;
+        if (Math.hypot(sx - cx, sy - cy) < 40) return;
+      }
+    }
+
+    const nearTower = (towers || []).some(
+      (t) => Math.hypot(sx - t.x, sy - t.y) < 53
+    );
+    if (nearTower) return;
+
+    validSpots.push({ x: sx, y: sy, angle });
+  };
+
+  roadPaths.forEach((path) => {
+    // 1. Прямые участки вдоль обеих обочин
+    for (let i = 0; i < path.length - 1; i++) {
+      const p1 = path[i];
+      const p2 = path[i + 1];
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const segLen = Math.sqrt(dx * dx + dy * dy);
+      if (segLen === 0) continue;
+
+      const ux = dx / segLen;
+      const uy = dy / segLen;
+      const nx = -uy;
+      const ny = ux;
+
+      for (let d = 6; d <= segLen - 6; d += step) {
+        const rx = p1.x + ux * d;
+        const ry = p1.y + uy * d;
+        const segAngle = Math.atan2(uy, ux);
+
+        tryAddSpot(rx + nx * targetOffset, ry + ny * targetOffset, segAngle);
+        tryAddSpot(rx - nx * targetOffset, ry - ny * targetOffset, segAngle);
+      }
+    }
+
+    // 2. Внешние изгибы (дуга радиусом 53 px вокруг каждой точки поворота)
+    for (let i = 1; i < path.length - 1; i++) {
+      const corner = path[i];
+      const arcSteps = 16;
+      for (let k = 0; k < arcSteps; k++) {
+        const theta = (k / arcSteps) * Math.PI * 2;
+        const sx = corner.x + Math.cos(theta) * targetOffset;
+        const sy = corner.y + Math.sin(theta) * targetOffset;
+        // Касательный угол к дуге поворота
+        tryAddSpot(sx, sy, theta + Math.PI / 2);
+      }
+    }
+  });
+
+  if (validSpots.length === 0) return;
+
+  const pulse = 0.72 + Math.sin(Date.now() / 220) * 0.28;
+
+  ctx.save();
+
+  validSpots.forEach((spot) => {
+    ctx.save();
+    ctx.translate(spot.x, spot.y);
+    ctx.rotate(spot.angle);
+    ctx.fillStyle = `rgba(0, 229, 255, ${0.14 * pulse})`;
+    ctx.fillRect(-8, -11, 16, 22);
+    ctx.restore();
+  });
+
+  validSpots.forEach((spot) => {
+    ctx.save();
+    ctx.translate(spot.x, spot.y);
+    ctx.rotate(spot.angle);
+    ctx.fillStyle = `rgba(0, 229, 255, ${0.55 * pulse})`;
+    ctx.fillRect(-3, -1.5, 6, 3);
+    ctx.restore();
+  });
+
+  ctx.restore();
+};
+
+
 
 
 

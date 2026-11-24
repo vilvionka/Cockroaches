@@ -2,32 +2,35 @@
 
 .wrap {
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-content: center;
   width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   background-color: #06090e;
-  min-height: 100vh;
   font-family: 'Montserrat', sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 
 
 /* --- МАГАЗИН (БОКОВАЯ ПАНЕЛЬ) --- */
 .bar {
-  width: 230px;
+  width: 290px;
   height: 600px;
   background: linear-gradient(180deg, rgba(10, 19, 30, 0.96) 0%, rgba(5, 10, 15, 0.98) 100%);
   border-left: 4px solid #00e5ff;
   border-radius: 3px;
   border-top-left-radius: 0px;
   border-bottom-left-radius: 0px;
-  padding: 16px 12px;
+  padding: 16px 14px;
   box-shadow: 0 0 35px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0, 229, 255, 0.05);
   color: #eceff1;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-
 }
 
 .bar_header {
@@ -796,7 +799,7 @@
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding: 8px 16px;
+  padding: 4px 12px;
   background: linear-gradient(180deg, rgba(10, 19, 30, 0.94) 0%, rgba(5, 10, 15, 0.96) 100%);
   border: 1px solid rgba(0, 229, 255, 0.25);
   border-top: 2px solid #00e5ff;
@@ -807,15 +810,18 @@
 
 .game {
   position: relative;
-  /* Важно для перекрытия всего игрового блока и правого бара */
+  width: 1090px;
+  height: 600px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  margin-top: 20px;
+  margin: 0;
   border-radius: 3px;
   gap: 0px;
   border: 1px solid rgba(0, 229, 255, 0.2);
   overflow: hidden;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
 }
 
 /* --- ЭКРАН GAME OVER (КОМПАКТНЫЙ ПОД МОБИЛКУ) --- */
@@ -1008,12 +1014,11 @@
   align-items: center;
   gap: 8px;
   background: rgba(0, 229, 255, 0.06);
-  border: 1px solid rgba(0, 229, 255, 0.25);
   border-radius: 3px;
   padding: 4px 10px;
   cursor: pointer;
   transition: all 0.2s ease;
-  border: 1px solid rgba(255, 82, 82, 0.45);
+  border: 1px solid rgba(255, 82, 82, 0.05);
   background: rgba(255, 82, 82, 0.08);
 }
 
@@ -1423,6 +1428,8 @@
   letter-spacing: 2px;
   color: #00e5ff;
   margin-bottom: 6px;
+  position: relative;
+  z-index: 2;
 }
 
 .lvl_complete_title {
@@ -1501,6 +1508,7 @@
 .hud_controls {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   margin-left: 4px;
 }
@@ -1512,14 +1520,16 @@
   align-items: center;
   justify-content: center;
   background: rgba(0, 229, 255, 0.08);
-  border: 1px solid rgba(0, 229, 255, 0.35);
+  border: 1px solid rgba(0, 229, 255, 0.05);
   border-radius: 3px;
   color: #00e5ff;
   font-size: 12px;
   font-weight: 700;
+  line-height: 24px;
   cursor: pointer;
   padding: 0;
   transition: all 0.2s ease;
+  display: block;
 }
 
 .hud_icon_btn:hover,
@@ -1531,7 +1541,7 @@
 
 .hud_restart_icon {
   color: #ff8a80;
-  border-color: rgba(255, 82, 82, 0.35);
+  border-color: rgba(255, 82, 82, 0.05);
   background: rgba(255, 82, 82, 0.08);
   font-size: 14px;
 }
@@ -1665,6 +1675,22 @@
   align-items: center;
   text-align: center;
   box-sizing: border-box;
+  background-image: url(../public/drop.jpg);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.supply_modal::after {
+  content: '';
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(10, 19, 30, 0.88) 0%, rgba(5, 10, 15, 0.89) 100%);
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
 }
 
 .supply_title {
@@ -1675,12 +1701,16 @@
   letter-spacing: 1.5px;
   color: #ffffff;
   text-shadow: 0 0 12px rgba(0, 229, 255, 0.5);
+  position: relative;
+  z-index: 2;
 }
 
 .supply_subtitle {
   margin: 0 0 18px 0;
   font-size: 11px;
   color: #8093a6;
+  position: relative;
+  z-index: 2;
 }
 
 .supply_grid {
@@ -1689,6 +1719,8 @@
   gap: 12px;
   width: 100%;
   margin-bottom: 16px;
+  position: relative;
+  z-index: 2;
 }
 
 .supply_card {
@@ -1828,6 +1860,8 @@
   cursor: pointer;
   box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
   transition: filter 0.2s ease, transform 0.15s ease;
+  position: relative;
+  z-index: 2;
 }
 
 .supply_claim_btn:hover {
@@ -1919,6 +1953,13 @@
   font-size: 10px;
   color: #b0bec5;
   box-sizing: border-box;
+  position: relative;
+  z-index: 2;
+}
+
+.supply_img {
+  position: relative;
+  z-index: 2;
 }
 
 .emergency_specs b {
@@ -2142,4 +2183,67 @@
   align-items: center;
   text-align: center;
   box-sizing: border-box;
+}
+
+
+/* =========================================================
+   ЭКРАН ПРОСЬБЫ ПОВЕРНУТЬ СМАРТФОН (ПОРТРЕТНЫЙ РЕЖИМ)
+   ========================================================= */
+.rotate_overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(4, 8, 14, 0.97);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.rotate_card {
+  width: 320px;
+  max-width: 92%;
+  background: linear-gradient(180deg, rgba(10, 19, 30, 0.98) 0%, rgba(5, 10, 15, 0.99) 100%);
+  border: 1px solid rgba(0, 229, 255, 0.45);
+  border-top: 2px solid #00e5ff;
+  border-bottom: 2px solid #00e5ff;
+  border-radius: 4px;
+  padding: 24px 20px;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(0, 229, 255, 0.15);
+}
+
+.rotate_icon {
+  font-size: 38px;
+  margin-bottom: 12px;
+  animation: rotatePhoneAnim 2s ease-in-out infinite;
+}
+
+.rotate_title {
+  margin: 6px 0 10px 0;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 16px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 1px;
+}
+
+.rotate_desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #b0bec5;
+}
+
+@keyframes rotatePhoneAnim {
+
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+
+  50% {
+    transform: rotate(-90deg);
+  }
 }

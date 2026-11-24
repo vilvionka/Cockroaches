@@ -18,6 +18,7 @@ export const UnlockWeaponModal = () => {
         <h2 className={styles.supply_title}>{weaponInfo.name}</h2>
 
         <div
+          className={styles.supply_img}
           style={{
             width: '96px',
             height: '96px',

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GameCanvas } from './components/GameCanvas';
 import { useGameStore, LEVELS_CONFIG } from './store/gameStore';
 import { TopHud } from './components/TopHud';
@@ -10,10 +10,13 @@ import { StartScreen } from './components/StartScreen';
 import { LevelCompleteModal } from './components/LevelCompleteModal';
 import { SupplyDropModal } from './components/SupplyDropModal';
 import { EmergencyStrikeModal } from './components/EmergencyStrikeModal';
+import { TutorialModal } from './components/TutorialModal';
 import { showFullscreenAd } from './utils/yandexAds';
 import { UnlockWeaponModal } from './components/UnlockWeaponModal';
-import { TutorialModal } from './components/TutorialModal';
 import styles from './App.module.css';
+
+const BASE_WIDTH = 1090; // 800 (Canvas) + 290 (Правая панель)
+const BASE_HEIGHT = 600;
 
 function App() {
   const waveActive = useGameStore((state) => state.waveActive);
@@ -29,6 +32,33 @@ function App() {
   const nextLevel = useGameStore((state) => state.nextLevel);
 
   const [gameStarted, setGameStarted] = useState(false);
+  const [scale, setScale] = useState(1);
+  const [isPortraitMobile, setIsPortraitMobile] = useState(false);
+
+  // Расчёт масштаба и отслеживание поворота экрана
+  useEffect(() => {
+    const updateViewport = () => {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      // Определяем узкий портретный экран (смартфон в вертикальном положении)
+      const portrait = vh > vw && vw < 768;
+      setIsPortraitMobile(portrait);
+
+      const scaleX = vw / BASE_WIDTH;
+      const scaleY = vh / BASE_HEIGHT;
+      setScale(Math.min(scaleX, scaleY));
+    };
+
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    window.addEventListener('orientationchange', updateViewport);
+
+    return () => {
+      window.removeEventListener('resize', updateViewport);
+      window.removeEventListener('orientationchange', updateViewport);
+    };
+  }, []);
 
   const handleNextLevelClick = () => {
     showFullscreenAd(() => {
@@ -36,17 +66,41 @@ function App() {
     });
   };
 
-
   return (
-    <div className={styles.wrap}>
-      <div className={styles.game}>
+    <div
+      className={styles.wrap}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      {/* Плашка просьбы повернуть телефон горизонтально (для вертикальных смартфонов) */}
+      {isPortraitMobile && (
+        <div className={styles.rotate_overlay}>
+          <div className={styles.rotate_card}>
+            <div className={styles.rotate_icon}>📱↻</div>
+            <div className={styles.lvl_complete_badge}>ОПТИМАЛЬНЫЙ РЕЖИМ ОБЗОРА</div>
+            <h2 className={styles.rotate_title}>ПОВЕРНИТЕ УСТРОЙСТВО</h2>
+            <p className={styles.rotate_desc}>
+              Для тактического управления обороной переверните смартфон в горизонтальное положение
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Масштабируемый игровой контейнер 1090x600 */}
+      <div
+        className={styles.game}
+        style={{
+          transform: `scale(${scale})`,
+          transformOrigin: 'center center'
+        }}
+      >
         {!gameStarted && (
           <StartScreen onStartGame={() => setGameStarted(true)} />
         )}
         <GameOverModal />
+
         {/* Игровая зона с холстом и верхним HUD поверх него */}
         <div className={styles.canvas_container}>
-          <GameCanvas isPaused={!gameStarted} />
+          <GameCanvas isPaused={!gameStarted || isPortraitMobile} />
           <TopHud />
           <LevelCompleteModal />
           <UnlockWeaponModal />
@@ -55,16 +109,14 @@ function App() {
           <EmergencyStrikeModal />
         </div>
 
-        {/* Правая панель магазина и апгрейдов */}
+        {/* Правая панель магазина и апгрейдов (ширина 290px) */}
         <div className={styles.bar}>
           <h3 className={styles.bar_header}>ЦЕНТР СНАБЖЕНИЯ</h3>
 
           <GoldPanel />
 
-          {/* Реактивное переключение: если на поле выбрана башня — показываем пульт управления ею, иначе сетку магазина */}
           {selectedTowerId ? <TowerControls /> : <TowerShop />}
 
-          {/* Нижний блок управления волнами (показывается только когда меню конкретной башни закрыто) */}
           {!selectedTowerId && (
             <div className={styles.bar_info_btn}>
               {gameOver ? (
@@ -91,7 +143,6 @@ function App() {
                         : `Начать уровень ${nextIncomingLevel}`}
                     </button>
                   ) : (
-
                     <button
                       onClick={startWave}
                       disabled={waveActive}
@@ -104,7 +155,6 @@ function App() {
               )}
             </div>
           )}
-
         </div>
       </div>
     </div>
