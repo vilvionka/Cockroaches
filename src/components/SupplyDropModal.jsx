@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
+import { RadioCommBox } from './RadioCommBox';
+import { PILOT_SUPPLY_LINES } from '../store/storyData';
 import styles from '../App.module.css';
 
 const LOOT_POOL = [
@@ -153,13 +155,14 @@ export const SupplyDropModal = () => {
   return (
     <div className={styles.supply_overlay}>
       <div className={styles.supply_modal} style={{ backgroundImage: "url('./drop.jpg')" }}>
-        <div className={styles.lvl_complete_badge}>СЕКТОР {currentLevel} // ОРБИТАЛЬНЫЙ СБРОС</div>
-        <h2 className={styles.supply_title}>ВЫБЕРИТЕ КОНТЕЙНЕР СНАБЖЕНИЯ</h2>
-        <p className={styles.supply_subtitle}>
-          {pickedIndex === null
-            ? 'В каждом контейнере зашифрованы кредиты, усилители или доп. лимиты на башни'
-            : 'Контейнер вскрыт! Заберите груз и приступайте к развёртыванию'}
-        </p>
+        <RadioCommBox
+          speakerKey="pilot"
+          badge={`СЕКТОР ${currentLevel} // ОРБИТАЛЬНЫЙ СБРОС`}
+          text={PILOT_SUPPLY_LINES[currentLevel] || PILOT_SUPPLY_LINES[1]}
+        />
+
+
+
 
         <div className={styles.supply_grid}>
           {cases.map((item, idx) => {
@@ -191,7 +194,7 @@ export const SupplyDropModal = () => {
                 ) : (
                   <div className={styles.supply_opened_body}>
                     <span className={styles.supply_status_tag}>
-                      {isPicked ? 'ПОЛУЧЕНО' : 'В ДРУГОМ КЕЙСЕ'}
+                      {isPicked ? 'ПОЛУЧЕНО' : 'В ДРУГОЙ КАПСУЛЕ'}
                     </span>
                     <div className={styles.supply_rarity}>{item.rarityLabel}</div>
                     <div className={styles.supply_reward_icon}>{item.icon}</div>

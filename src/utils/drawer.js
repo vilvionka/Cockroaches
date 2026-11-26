@@ -54,29 +54,42 @@ export const drawRoad = (ctx, currentLevel) => {
   const config = LEVELS_CONFIG[currentLevel];
   if (!config || !config.tileMap) return;
 
-  const tileSize = 60; // Визуальный размер плитки
+  const tileSize = 60;
+  const offsetCols = 2; // Сдвиг на 2 плитки вправо (120 px)
 
   config.tileMap.forEach((row, rowIndex) => {
+    // Если в самой левой колонке уровня (colIndex === 0) есть дорога — дорисовываем 2 входные плитки слева
+    if (row[0]) {
+      for (let extraCol = 0; extraCol < offsetCols; extraCol++) {
+        const ex = extraCol * tileSize + tileSize / 2;
+        const ey = rowIndex * tileSize + tileSize / 2;
+
+        ctx.save();
+        ctx.translate(ex, ey);
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+        ctx.shadowBlur = 12;
+        if (assets.roadStraight && assets.roadStraight.loaded) {
+          ctx.drawImage(assets.roadStraight.img, -tileSize / 2, -tileSize / 2, tileSize, tileSize);
+        }
+        ctx.restore();
+      }
+    }
+
     row.forEach((tile, colIndex) => {
       if (!tile) return;
 
-      const x = colIndex * tileSize + tileSize / 2;
+      const x = (colIndex + offsetCols) * tileSize + tileSize / 2;
       const y = rowIndex * tileSize + tileSize / 2;
 
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate((tile.angle * Math.PI) / 180);
 
-      // --- ДОБАВЛЯЕМ ОБЪЕМНУЮ ТЕНЬ ДЛЯ ВСЕХ БОРТИКОВ ДОРОГИ ---
-      // Глубокий полупрозрачный черный цвет для тени
       ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
-      // Радиус размытия (сделайте 12-15 для мягкого эффекта «приподнятости» над землей)
       ctx.shadowBlur = 12;
-      // Смещение тени (0,0 дает равномерное затенение со всех сторон, создавая глубину)
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
 
-      // Выбираем нужный ассет
       let asset = null;
       if (tile.type === 'straight') asset = assets.roadStraight;
       if (tile.type === 'corner') asset = assets.roadCorner;
@@ -85,7 +98,6 @@ export const drawRoad = (ctx, currentLevel) => {
       if (asset && asset.loaded) {
         ctx.drawImage(asset.img, -tileSize / 2, -tileSize / 2, tileSize, tileSize);
       } else {
-        // Заглушка, если картинка потерялась (сбрасываем тень для заглушек)
         ctx.shadowColor = 'transparent';
         ctx.shadowBlur = 0;
         ctx.fillStyle = '#37474F';
@@ -96,6 +108,7 @@ export const drawRoad = (ctx, currentLevel) => {
     });
   });
 };
+
 
 
 
@@ -372,7 +385,7 @@ export const drawTowers = (ctx, towers) => {
     // --- 7. ИНДИКАТОР ЗАРЯДКИ РАКЕТНОЙ ШАХТЫ НАД БАШНЕЙ ---
     if (tower.isRocketSilo && !tower.underConstruction) {
       ctx.save();
-      const markerY = tower.y - tower.size / 2 - 14;
+      const markerY = tower.y - tower.size / 2 - 24;
       const isReady = (tower.ammoReady || 0) > 0;
 
       if (isReady) {
@@ -489,7 +502,9 @@ export const drawEnemies = (ctx, enemies, roadPaths) => {
     // --- 2. ОТРИСОВКА САМОГО ЖУКА (ПОВЕРХ ТЕНИ) ---
     ctx.save();
     ctx.translate(enemy.x, enemy.y);
-    ctx.rotate(currentAngle + Math.PI / 2);
+    const frameAngleOffset = enemy.frameAngles ? (enemy.frameAngles[enemy.currentFrame] || 0) : 0;
+    ctx.rotate(currentAngle + Math.PI / 2 + frameAngleOffset);
+
 
     const offsetX = enemy.frameOffsetsX ? enemy.frameOffsetsX[enemy.currentFrame] : 0;
 
@@ -1000,7 +1015,8 @@ export const drawRocketPad = (ctx, currentLevel, isSiloSelected = false) => {
   const config = LEVELS_CONFIG[currentLevel];
   if (!config || !config.rocketPad) return;
 
-  const pad = config.rocketPad;
+  const pad = { x: config.rocketPad.x + 120, y: config.rocketPad.y };
+
   const padSize = 70; // Размер картинки площадки в пикселях (можете подстроить под свой спрайт)
 
   // 1. Отрисовка картинки стройплощадки вместо круга и надписи LAUNCH PAD
@@ -1355,7 +1371,7 @@ export const drawRocketAim = (ctx, aimPos, isValidTarget, blastRadius = 65) => {
   // 1. ВЕРХНЯЯ ТАКТИЧЕСКАЯ ПЛАШКА-ПОДСКАЗКА (видна и на ПК, и на мобильных)
   const bannerW = 340;
   const bannerH = 28;
-  const bannerX = (800 - bannerW) / 2;
+  const bannerX = (920 - bannerW) / 2;
   const bannerY = 62; // Сразу под верхним HUD
 
   const pulseAlpha = 0.75 + Math.sin(Date.now() / 180) * 0.25;
@@ -1371,7 +1387,8 @@ export const drawRocketAim = (ctx, aimPos, isValidTarget, blastRadius = 65) => {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#00E5FF';
-  ctx.fillText('🎯 ТАПНИТЕ ПО ДОРОГЕ ДЛЯ УДАРА', 400, bannerY + bannerH / 2);
+  ctx.fillText('ТАП ПО ДОРОГЕ — УДАР | ПО ШАХТЕ / ПКМ — ОТМЕНА', 460, bannerY + bannerH / 2);
+
 
   // 2. САМ ПРИЦЕЛ ПОД КУРСОРОМ (рисуется на ПК при движении мыши)
   if (aimPos) {
@@ -1452,7 +1469,7 @@ export const drawBuildZones = (ctx, roadPaths, networkGraph, towers, selectedTow
   if (availableNodes.length === 0) return;
 
   const firstPath = roadPaths || [];
-  const cakePoint = firstPath[firstPath.length - 1] || { x: 800, y: 270 };
+  const cakePoint = firstPath[firstPath.length - 1] || { x: 920, y: 270 };
   const targetOffset = 53;
   const step = 12;
 
@@ -1460,7 +1477,8 @@ export const drawBuildZones = (ctx, roadPaths, networkGraph, towers, selectedTow
 
   // Общая проверка точки на доступность для строительства
   const tryAddSpot = (sx, sy, angle) => {
-    if (sx < 28 || sx > 772 || sy < 28 || sy > 572) return;
+    if (sx < 28 || sx > 892 || sy < 28 || sy > 572) return;
+
 
     const inNetwork = availableNodes.some(
       (n) => Math.hypot(sx - n.x, sy - n.y) <= n.range

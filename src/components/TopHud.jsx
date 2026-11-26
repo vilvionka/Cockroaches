@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useGameStore } from '../store/gameStore';
+import { useGameStore, LEVELS_CONFIG } from '../store/gameStore';
 import styles from '../App.module.css';
 
 export const TopHud = () => {
@@ -7,7 +7,8 @@ export const TopHud = () => {
   const [expandedType, setExpandedType] = useState(null);
   const [confirmRestart, setConfirmRestart] = useState(false);
 
-  const score = useGameStore((state) => state.score);
+  const currentLevel = useGameStore((state) => state.currentLevel);
+  const levelWaveNumber = useGameStore((state) => state.levelWaveNumber);
   const cakeHp = useGameStore((state) => state.cakeHp);
   const maxCakeHp = useGameStore((state) => state.maxCakeHp || 100);
   const waveActive = useGameStore((state) => state.waveActive);
@@ -27,6 +28,9 @@ export const TopHud = () => {
       setExpandedType(null);
     }
   }, [waveActive]);
+
+  const maxWaves = LEVELS_CONFIG[currentLevel]?.maxWaves || 6;
+  const displayWave = waveActive ? levelWaveNumber : Math.min(maxWaves, levelWaveNumber + 1);
 
   // Собираем уникальные виды жуков текущей волны
   const allWaveEnemies = [...enemies, ...spawnQueue];
@@ -60,17 +64,28 @@ export const TopHud = () => {
     restartGame();
   };
 
+  const [radarPing, setRadarPing] = useState(false);
+
+  useEffect(() => {
+    const handleIntelPing = () => {
+      setRadarPing(true);
+      setTimeout(() => setRadarPing(false), 750);
+    };
+    window.addEventListener('radar-intel-received', handleIntelPing);
+    return () => window.removeEventListener('radar-intel-received', handleIntelPing);
+  }, []);
+
+
   return (
     <>
       <div className={styles.hud_container}>
-
-
-        {/* Основной контент HUD */}
         <div className={styles.top_hud}>
-          {/* Блок очков */}
+          {/* Прогресс волн уровня вместо очков */}
           <div className={styles.hud_score}>
-            <span className={styles.hud_label}>ОЧКИ:</span>
-            <span className={styles.hud_value_cyan}>{score}</span>
+            <span className={styles.hud_label}>ВОЛНА:</span>
+            <span className={styles.hud_value_cyan}>
+              {displayWave}/{maxWaves}
+            </span>
           </div>
 
           {/* Статус волны */}
@@ -79,10 +94,11 @@ export const TopHud = () => {
               <button
                 type="button"
                 onClick={() => setIsIntelOpen((prev) => !prev)}
-                className={styles.hud_wave_btn}
+                className={`${styles.hud_wave_btn} ${radarPing ? styles.hud_wave_btn_ping : ''}`}
                 data-open={isIntelOpen}
                 title="Показать врагов текущей волны"
               >
+
                 <span className={styles.hud_wave_btn_label}>ВРАГИ</span>
                 <span className={styles.hud_radar_pill}>
                   {uniqueWaveEnemies.length}
@@ -184,12 +200,7 @@ export const TopHud = () => {
         )}
       </div>
 
-      {/* Оверлей паузы поверх игрового поля */}
-      {isUserPaused && !confirmRestart && (
-        <div className={styles.pause_overlay}>
 
-        </div>
-      )}
 
       {/* Компактное окно подтверждения рестарта */}
       {confirmRestart && (

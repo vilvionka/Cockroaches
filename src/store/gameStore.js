@@ -249,7 +249,7 @@ export const LEVELS_CONFIG = {
       // Центральный вход (row 3 -> y = 210) спускается на row 4
       [{ type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'corner', angle: 0 }, null, null, null, { type: 'straight', angle: 90 }, null, null, null, null, null],
       // Главная магистраль (row 4 -> y = 270): два Т-перекрёстка (col 7 и col 10) перед Базой
-      [null, null, null, { type: 'corner', angle: 180 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 't_junction', angle: 270 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 't_junction', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }],
+      [null, null, null, { type: 'corner', angle: 180 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 't_junction', angle: 180 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 't_junction', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }],
       [null, null, null, null, null, null, null, null, null, null, { type: 'straight', angle: 90 }, null, null],
       // Нижняя дорога поднимается ко второму перекрёстку
       [null, null, null, null, null, { type: 'corner', angle: 270 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'straight', angle: 0 }, { type: 'corner', angle: 90 }, null, null],
@@ -360,10 +360,9 @@ export const useGameStore = create((set, get) => ({
 
 
 
-  // Массив путей для текущей карты
-  // Внутри useGameStore (где объявляются дефолтные переменные) верните старую добрую строку:
-  roadPaths: LEVELS_CONFIG[1].paths,
-  decorations: LEVELS_CONFIG[1].decorations ? JSON.parse(JSON.stringify(LEVELS_CONFIG[1].decorations)) : [],
+  roadPaths: getShiftedLevelData(1).paths,
+  decorations: getShiftedLevelData(1).decorations,
+
 
 
   enemies: [],
@@ -395,6 +394,7 @@ export const useGameStore = create((set, get) => ({
     boss: 0
   },
   isUserPaused: false,
+  isStoryPaused: false,
   isEmergencyAdOpen: false,
   emergencyStrikeUsed: false,
   emergencyCooldown: 0,
@@ -458,20 +458,22 @@ export const useGameStore = create((set, get) => ({
       size: 55,
       damage: 20,
       reward: 50,
-      scoreReward: 25, // Толстый жук — 25 очков
+      scoreReward: 25,
       spritePath: './beetle.png',
       bloodColor: '#99ff00',
       cols: 4,
       rows: 2,
       totalFrames: 8,
-      imgWidth: 1365,  // 👈 ПОМЕНЯТЬ ТУТ
-      imgHeight: 768,  // 👈 ПОМЕНЯТЬ ТУТ
-      animSpeed: 8,
-      frameOffsetsX: [1.5, 0.5, 0, -1.5, 1.5, 0.5, 0, -1.5],
+      imgWidth: 1365,
+      imgHeight: 768,
+      animSpeed: 6,
+      // Небольшой доворот в радианах для кадров, где панцирь нарисован под углом
+      frameAngles: [0, 0.06, -0.07, 0.03, 0, 0.05, -0.06, 0.02],
       missChance: 0.07,
       name: 'Золотой панцирник',
       description: 'Тяжелый панцирь с большим запасом здоровья. Шанс уклонения от выстрелов — 7%.'
     },
+
     fly: {
       type: 'fly',
       speed: 1.3,
@@ -637,6 +639,24 @@ export const useGameStore = create((set, get) => ({
     return { isUserPaused: nextPaused };
   }),
 
+  pauseBySystem: () => set((state) => {
+    if (
+      state.gameOver ||
+      state.levelTransition ||
+      state.isUserPaused ||
+      state.isStoryPaused ||
+      state.isSupplyDropOpen ||
+      state.isEmergencyAdOpen ||
+      state.unlockedWeaponModal
+    ) {
+      return {};
+    }
+
+    window.ysdk?.features?.GameplayAPI?.stop();
+    return { isUserPaused: true };
+  }),
+
+
   claimSupplyDrop: (reward) => set((state) => {
     if (!reward) return { isSupplyDropOpen: false };
 
@@ -684,21 +704,24 @@ export const useGameStore = create((set, get) => ({
     loadLevelDecor(validLevel);
     const calculatedGold = Math.min(600, validLevel * 150);
 
+    const lvlData = getShiftedLevelData(validLevel);
     return {
       currentLevel: validLevel,
       levelWaveNumber: 0,
       waveNumber: 0,
-      roadPaths: LEVELS_CONFIG[validLevel].paths,
+      roadPaths: lvlData.paths,
       gold: calculatedGold,
       isSupplyDropOpen: true,
       bonusTowerLimits: { gun: 0, bomb: 0, frost: 0, mlrs: 0 },
-      emergencyStrikeUsed: false, isEmergencyAdOpen: false, emergencyTarget: null, emergencyCooldown: 0,
+      emergencyStrikeUsed: false,
+      emergencyCooldown: 0,
+      isEmergencyAdOpen: false,
+      emergencyTarget: null,
       score: savedScore,
       savedScore: savedScore,
-      decorations: LEVELS_CONFIG[validLevel].decorations
-        ? JSON.parse(JSON.stringify(LEVELS_CONFIG[validLevel].decorations))
-        : []
+      decorations: lvlData.decorations
     };
+
   }),
 
 
@@ -798,7 +821,7 @@ export const useGameStore = create((set, get) => ({
       if (hasSilo) return { selectedTowerType: null, buildPreview: null, isAimingRocket: false };
 
       const towerData = state.towerTypes[type];
-      const pad = LEVELS_CONFIG[state.currentLevel]?.rocketPad;
+      const pad = getShiftedLevelData(state.currentLevel).rocketPad;
       if (!pad || !towerData) return { selectedTowerType: type, isAimingRocket: false };
 
       return {
@@ -841,7 +864,8 @@ export const useGameStore = create((set, get) => ({
       const hasSilo = state.towers.some(t => t.isRocketSilo);
       if (hasSilo) return {};
 
-      const pad = LEVELS_CONFIG[state.currentLevel].rocketPad;
+      const pad = getShiftedLevelData(state.currentLevel).rocketPad;
+
       return {
         buildPreview: {
           type: selectedTowerType,
@@ -891,8 +915,10 @@ export const useGameStore = create((set, get) => ({
     if (gold < buildPreview.cost) return { buildPreview: null, selectedTowerType: null };
 
     const towerData = towerTypes[buildPreview.type];
+    const basePoint = getShiftedLevelData(currentLevel).basePoint;
     let parentId = null;
     let connectionSource = null;
+
 
     // Вспомогательная функция для быстрого пуша всплывающих ошибок
     const pushErrorText = (text) => {
@@ -924,7 +950,7 @@ export const useGameStore = create((set, get) => ({
 
     // 1. ДЛЯ ВСЕХ, КРОМЕ РАКЕТЫ: Проверяем наличие связи с базой
     if (!towerData.isRocketSilo) {
-      const basePoint = LEVELS_CONFIG[currentLevel].basePoint;
+      const basePoint = getShiftedLevelData(currentLevel).basePoint;
       const networkGraph = helpers.calculateNetworkGraph(towers, basePoint, towerTypes);
 
       // Ищем доступный узел подключения
@@ -953,10 +979,9 @@ export const useGameStore = create((set, get) => ({
     }
 
     // 2. ДЛЯ ВСЕХ, КРОМЕ РАКЕТЫ: Проверки геопозиции (база, дороги, пересечения)
+    // 2. ДЛЯ ВСЕХ, КРОМЕ РАКЕТЫ: Проверки геопозиции (база, дороги, пересечения)
     if (!towerData.isRocketSilo) {
-      const paths = roadPaths || [];
-      const firstPath = paths[0] || [];
-      const cakePoint = firstPath[firstPath.length - 1] || { x: 800, y: 250 };
+      const cakePoint = basePoint;
       const baseSafetyWidth = 85;
       const baseSafetyHeight = 85;
 
@@ -967,6 +992,7 @@ export const useGameStore = create((set, get) => ({
         pushErrorText("БЛИЗКО К БАЗЕ");
         return {};
       }
+
 
       // Проверка: Не пытаемся ли поставить прямо НА полотно дороги
       for (let path of roadPaths) {
@@ -1281,25 +1307,29 @@ export const useGameStore = create((set, get) => ({
     loadLevelDecor(nextLvl);
 
     const calculatedGold = Math.min(600, nextLvl * 150);
-    const healedHp = Math.min(state.maxCakeHp || 100, state.cakeHp + 25);
+    const currentMaxHp = state.maxCakeHp || 100;
+    const healedHp = Math.min(currentMaxHp, state.cakeHp + 25);
+
+    const lvlData = getShiftedLevelData(nextLvl);
 
     return {
       currentLevel: nextLvl,
       levelWaveNumber: 0,
-      roadPaths: LEVELS_CONFIG[nextLvl].paths,
-      basePoint: LEVELS_CONFIG[nextLvl].basePoint,
+      roadPaths: lvlData.paths,
+      basePoint: lvlData.basePoint,
       towers: [],
       bullets: [],
       enemies: [],
       spawnQueue: [],
       unlockedWeaponModal: unlockInfo,
-      isSupplyDropOpen: !unlockInfo, // 👈 Оставляем ТОЛЬКО эту строку!
+      isSupplyDropOpen: !unlockInfo,
       emergencyStrikeUsed: false,
       isEmergencyAdOpen: false,
       emergencyTarget: null,
       emergencyCooldown: 0,
       activeHoleIndex: null,
       isUserPaused: false,
+      isStoryPaused: false,
       waveActive: false,
       waveTimer: 900,
       levelTransition: false,
@@ -1311,11 +1341,11 @@ export const useGameStore = create((set, get) => ({
       scorches: [],
       bonusTowerLimits: { gun: 0, bomb: 0, frost: 0, mlrs: 0 },
       gold: calculatedGold,
-      decorations: LEVELS_CONFIG[nextLvl].decorations
-        ? JSON.parse(JSON.stringify(LEVELS_CONFIG[nextLvl].decorations))
-        : [],
-      cakeHp: healedHp
+      decorations: lvlData.decorations,
+      cakeHp: healedHp,
+      maxCakeHp: currentMaxHp,
     };
+
 
   }),
 
@@ -1443,21 +1473,25 @@ export const useGameStore = create((set, get) => ({
     loadLevelDecor(startLevel);
     const calculatedGold = Math.min(600, startLevel * 150);
 
+    const lvlData = getShiftedLevelData(startLevel);
+
     return {
       currentLevel: startLevel,
       levelWaveNumber: 0,
       waveNumber: 0,
-      roadPaths: LEVELS_CONFIG[startLevel].paths,
+      roadPaths: lvlData.paths,
       enemies: [],
       spawnQueue: [],
       spawnTimer: 0,
       cakeHp: 100,
+      maxCakeHp: 100,
       waveTimer: 900,
       waveActive: false,
       emergencyStrikeUsed: false, isEmergencyAdOpen: false, emergencyTarget: null, emergencyCooldown: 0,
       gameOver: false,
       score: state.savedScore || 0,
       isUserPaused: false,
+      isStoryPaused: false,
       killedStats: { normal: 0, ant: 0, beetle: 0, rhino: 0, fly: 0, boss: 0 },
       scorches: [],
       gold: calculatedGold,
@@ -1481,15 +1515,13 @@ export const useGameStore = create((set, get) => ({
       isSupplyDropOpen: true,
       bonusTowerLimits: { gun: 0, bomb: 0, frost: 0, mlrs: 0 },
       selectedTowerId: null,
-      decorations: LEVELS_CONFIG[startLevel].decorations
-        ? JSON.parse(JSON.stringify(LEVELS_CONFIG[startLevel].decorations))
-        : []
+      decorations: lvlData.decorations,
     };
   }),
 
 
   updateGame: () => set((state) => {
-    if (state.gameOver || state.levelTransition || state.isUserPaused || state.isSupplyDropOpen || state.isEmergencyAdOpen || state.unlockedWeaponModal) return {};
+    if (state.gameOver || state.levelTransition || state.isUserPaused || state.isStoryPaused || state.isSupplyDropOpen || state.isEmergencyAdOpen || state.unlockedWeaponModal) return {};
 
 
     const spawnData = helpers.handleSpawning(state);
@@ -1851,7 +1883,7 @@ export const useGameStore = create((set, get) => ({
       isLowHp &&
       finalAliveEnemies.length > 0
     ) {
-      const basePt = LEVELS_CONFIG[state.currentLevel]?.basePoint || { x: 800, y: 270 };
+      const basePt = getShiftedLevelData(state.currentLevel).basePoint;
       let closestThreat = null;
       let minDist = Infinity;
 
@@ -2010,17 +2042,20 @@ export const useGameStore = create((set, get) => ({
 
 
   enterRocketAimMode: () => set({ isAimingRocket: true, selectedTowerId: null }),
+  cancelRocketAimMode: () => set({ isAimingRocket: false }),
+
 
   launchRocket: (targetX, targetY) => set((state) => {
     const { towers, flyingRockets, currentLevel } = state;
     const silo = towers.find(t => t.isRocketSilo);
     if (!silo || silo.ammoReady <= 0 || silo.underConstruction) return {};
 
-    const pad = LEVELS_CONFIG[currentLevel].rocketPad;
+    const pad = getShiftedLevelData(state.currentLevel).rocketPad;
+
 
     // Рассчитываем базовые характеристики на основе уровня
     const lvl = silo.level || 1;
-    let urok = 1000 * Math.pow(1.2, lvl - 1);
+    let urok = 2500 * Math.pow(1.2, lvl - 1);
     let radius = 65;
     let baseSpeed = 3.5 + (lvl * 0.5);
 
@@ -2029,7 +2064,7 @@ export const useGameStore = create((set, get) => ({
       urok = urok * 1.5; // Ядерный удар: +50% к урону от 4 уровня
     } else if (silo.specialization === 'grad') {
       radius = radius * 1.33; // Град: +33% к радиусу поражения, урон как на 4 лвл
-      urok = 1000 * Math.pow(1.2, 3);
+      urok = 2500 * Math.pow(1.2, 3);
     }
 
     // Рассчитываем время полета (до 5 секунд, то есть макс 300 кадров)
@@ -2070,14 +2105,15 @@ export const useGameStore = create((set, get) => ({
     window.ysdk?.features?.GameplayAPI?.start();
     set({
       isEmergencyAdOpen: false,
-      emergencyStrikeUsed: true,
+      emergencyStrikeUsed: false,
       emergencyCooldown: 360,
       emergencyTarget: null
     });
   },
 
+
   triggerEmergencyRocket: () => set((state) => {
-    const basePt = LEVELS_CONFIG[state.currentLevel]?.basePoint || { x: 800, y: 270 };
+    const basePt = getShiftedLevelData(state.currentLevel).basePoint;
     const startX = basePt.x - 30;
     const startY = basePt.y;
 

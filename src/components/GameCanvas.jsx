@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { useGameStore } from '../store/gameStore';
+import { useGameStore, getShiftedLevelData } from '../store/gameStore';
 import { preloadAllAssets, assets } from '../utils/assetLoader';
 import * as drawer from '../utils/drawer';
 import * as gameHelpers from '../store/gameHelpers';
@@ -55,9 +55,26 @@ export const GameCanvas = ({ isPaused }) => {
     const state = useGameStore.getState();
 
     // --- РЕЖИМ НАВЕДЕНИЯ РАКЕТЫ (СРАБАТЫВАЕТ ПО ОДНОМУ КЛИКУ / ТАПУ) ---
+    // --- РЕЖИМ НАВЕДЕНИЯ РАКЕТЫ (СРАБАТЫВАЕТ ПО ОДНОМУ КЛИКУ / ТАПУ) ---
     if (state.isAimingRocket) {
-      let hitRoad = false;
+      // Отмена прицела по правой кнопке мыши
+      if (event.button === 2) {
+        useGameStore.getState().cancelRocketAimMode();
+        mousePosRef.current = null;
+        return;
+      }
 
+      // Отмена прицела при повторном тапе по самой Ракетной шахте
+      const clickedSilo = state.towers.find(
+        (t) => t.isRocketSilo && Math.hypot(clickX - t.x, clickY - t.y) <= 32
+      );
+      if (clickedSilo) {
+        useGameStore.getState().cancelRocketAimMode();
+        mousePosRef.current = null;
+        return;
+      }
+
+      let hitRoad = false;
       for (let path of state.roadPaths) {
         if (gameHelpers.checkIsOnRoad(clickX, clickY, path)) {
           hitRoad = true;
@@ -87,6 +104,7 @@ export const GameCanvas = ({ isPaused }) => {
       }
       return;
     }
+
 
     // 1. Тапнули ли по лежащему на земле предмету?
     const clickedItem = state.droppedItems.find((item) => {
@@ -162,7 +180,7 @@ export const GameCanvas = ({ isPaused }) => {
 
       const currentLvl = useGameStore.getState().currentLevel;
       useGameStore.setState({
-        decorations: LEVELS_CONFIG[currentLvl]?.decorations || []
+        decorations: getShiftedLevelData(currentLvl).decorations
       });
 
       lastTime = performance.now();
@@ -268,7 +286,7 @@ export const GameCanvas = ({ isPaused }) => {
     <div style={{ display: 'flex', justifyContent: 'center', padding: '0px' }}>
       <canvas
         ref={canvasRef}
-        width={800}
+        width={920}
         height={600}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}

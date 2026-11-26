@@ -10,12 +10,14 @@ import { StartScreen } from './components/StartScreen';
 import { LevelCompleteModal } from './components/LevelCompleteModal';
 import { SupplyDropModal } from './components/SupplyDropModal';
 import { EmergencyStrikeModal } from './components/EmergencyStrikeModal';
-import { TutorialModal } from './components/TutorialModal';
-import { showFullscreenAd } from './utils/yandexAds';
+import { IntroStoryModal } from './components/IntroStoryModal';
+import { BattleRadioToast } from './components/BattleRadioToast';
+
+
 import { UnlockWeaponModal } from './components/UnlockWeaponModal';
 import styles from './App.module.css';
 
-const BASE_WIDTH = 1090; // 800 (Canvas) + 290 (Правая панель)
+const BASE_WIDTH = 1210; // 800 (Canvas) + 290 (Правая панель)
 const BASE_HEIGHT = 600;
 
 function App() {
@@ -34,6 +36,21 @@ function App() {
   const [gameStarted, setGameStarted] = useState(false);
   const [scale, setScale] = useState(1);
   const [isPortraitMobile, setIsPortraitMobile] = useState(false);
+
+  const isUserPaused = useGameStore((state) => state.isUserPaused);
+  const isStoryPaused = useGameStore((state) => state.isStoryPaused);
+  const isSupplyDropOpen = useGameStore((state) => state.isSupplyDropOpen);
+  const isEmergencyAdOpen = useGameStore((state) => state.isEmergencyAdOpen);
+  const unlockedWeaponModal = useGameStore((state) => state.unlockedWeaponModal);
+  const togglePause = useGameStore((state) => state.togglePause);
+
+  const isSidebarBlocked =
+    isUserPaused ||
+    isStoryPaused ||
+    levelTransition ||
+    isSupplyDropOpen ||
+    isEmergencyAdOpen ||
+    Boolean(unlockedWeaponModal);
 
   // Расчёт масштаба и отслеживание поворота экрана
   useEffect(() => {
@@ -60,11 +77,38 @@ function App() {
     };
   }, []);
 
-  const handleNextLevelClick = () => {
-    showFullscreenAd(() => {
-      nextLevel();
-    });
-  };
+  // Автопауза при сворачивании вкладки или потере фокуса (требование Яндекс Игр)
+  useEffect(() => {
+    if (!gameStarted) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        useGameStore.getState().pauseBySystem();
+      }
+    };
+
+    const handleWindowBlur = () => {
+      useGameStore.getState().pauseBySystem();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleWindowBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
+    };
+  }, [gameStarted]);
+
+  useEffect(() => {
+    const preventZoom = (e) => e.preventDefault();
+    document.addEventListener('gesturestart', preventZoom);
+    return () => document.removeEventListener('gesturestart', preventZoom);
+  }, []);
+
+
+
+
 
   return (
     <div
@@ -85,7 +129,7 @@ function App() {
         </div>
       )}
 
-      {/* Масштабируемый игровой контейнер 1090x600 */}
+      {/* Масштабируемый игровой контейнер 1210x600 */}
       <div
         className={styles.game}
         style={{
@@ -98,14 +142,21 @@ function App() {
         )}
         <GameOverModal />
 
+        {/* Общий затемняющий оверлей поверх холста и правого сайт-бара */}
+        {gameStarted && !gameOver && isSidebarBlocked && (
+          <div className={styles.global_modal_backdrop} />
+        )}
+
+
         {/* Игровая зона с холстом и верхним HUD поверх него */}
         <div className={styles.canvas_container}>
           <GameCanvas isPaused={!gameStarted || isPortraitMobile} />
           <TopHud />
+          <BattleRadioToast />
           <LevelCompleteModal />
           <UnlockWeaponModal />
           <SupplyDropModal />
-          <TutorialModal gameStarted={gameStarted} />
+          <IntroStoryModal gameStarted={gameStarted} />
           <EmergencyStrikeModal />
         </div>
 
@@ -127,30 +178,25 @@ function App() {
                     <h2 className={styles.level_title}>УРОВЕНЬ {currentLevel}</h2>
                     <div className={styles.wave_subtitle}>
                       {levelTransition
-                        ? (!LEVELS_CONFIG[nextIncomingLevel]
-                          ? 'Кампания завершена!'
-                          : `Ожидание уровня ${nextIncomingLevel}`)
+                        ? 'Сектор зачищен'
                         : waveActive
                           ? `Идет волна: ${levelWaveNumber}`
                           : `Следующая волна: ${levelWaveNumber + 1}`}
                     </div>
                   </div>
 
-                  {levelTransition ? (
-                    <button onClick={handleNextLevelClick} className={`${styles.bar_btn_weln} ${styles.btn_next_level}`}>
-                      {!LEVELS_CONFIG[nextIncomingLevel]
-                        ? 'Новая игра'
-                        : `Начать уровень ${nextIncomingLevel}`}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={startWave}
-                      disabled={waveActive}
-                      className={`${styles.bar_btn_weln} ${waveActive ? styles.btn_wave_active : styles.btn_wave_ready}`}
-                    >
-                      {waveActive ? 'Волна идет...' : 'В БОЙ!'}
-                    </button>
-                  )}
+                  <button
+                    onClick={startWave}
+                    disabled={waveActive || levelTransition}
+                    className={`${styles.bar_btn_weln} ${waveActive || levelTransition ? styles.btn_wave_active : styles.btn_wave_ready
+                      }`}
+                  >
+                    {levelTransition
+                      ? 'Ожидание...'
+                      : waveActive
+                        ? 'Волна идет...'
+                        : 'В БОЙ!'}
+                  </button>
                 </div>
               )}
             </div>

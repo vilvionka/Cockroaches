@@ -1,5 +1,7 @@
 import React from 'react';
 import { useGameStore } from '../store/gameStore';
+import { RadioCommBox } from './RadioCommBox';
+import { COMMANDER_UNLOCK_LINES } from '../store/storyData';
 import styles from '../App.module.css';
 
 export const UnlockWeaponModal = () => {
@@ -11,9 +13,13 @@ export const UnlockWeaponModal = () => {
   return (
     <div className={styles.supply_overlay} style={{ zIndex: 62 }}>
       <div className={styles.supply_modal} style={{ width: '440px' }}>
-        <div className={styles.lvl_complete_badge}>
-          СЕКТОР {weaponInfo.level} // {weaponInfo.badge}
-        </div>
+        <RadioCommBox
+          speakerKey="commander"
+          badge={`СЕКТОР ${weaponInfo.level} // НОВОЕ ВООРУЖЕНИЕ`}
+          text={COMMANDER_UNLOCK_LINES[weaponInfo.level] || weaponInfo.description}
+        />
+
+
 
         <h2 className={styles.supply_title}>{weaponInfo.name}</h2>
 
@@ -48,9 +54,7 @@ export const UnlockWeaponModal = () => {
           ))}
         </div>
 
-        <p className={styles.supply_subtitle} style={{ color: '#cfd8dc', lineHeight: 1.45, marginBottom: '18px' }}>
-          {weaponInfo.description}
-        </p>
+
 
         <button
           type="button"

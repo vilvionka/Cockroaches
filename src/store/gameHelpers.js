@@ -773,8 +773,11 @@ export const updateBulletsAndCollisions = (
 
       if (bullet.bulletType === 'frost') {
         target.slowTimer = bullet.slowDuration;
-        target.slowFactor = bullet.slowFactor;
+        target.slowFactor = target.type === 'boss'
+          ? Math.max(0.85, bullet.slowFactor) // Для матки замедление максимум на 15%
+          : bullet.slowFactor;
       }
+
 
       if (bullet.bulletType === 'splash') {
         enemies.forEach((otherEnemy) => {
@@ -934,9 +937,10 @@ export const generateWaveBlueprint = (waveNumber, enemyTypes, roadPaths, current
     }
   }
 
-  // Массив видов жуков по уровням для определения, чья матка идёт на каком уровне
-  const levelBossOrder = ['normal', 'ant', 'beetle', 'rhino', 'fly'];
+  // Массив видов жуков по уровням: 1 - скаут, 2 - стридер, 3 - панцирник, 4 - пиро-рейнджер, 5 - джаггернаут
+  const levelBossOrder = ['normal', 'ant', 'beetle', 'fly', 'rhino'];
   const currentBossSpecies = levelBossOrder[(currentLevel - 1) % levelBossOrder.length];
+
 
   for (let i = 0; i < totalEnemies; i++) {
     let chosenType = 'normal';
@@ -1000,19 +1004,26 @@ export const generateWaveBlueprint = (waveNumber, enemyTypes, roadPaths, current
   }
 
   // Финальная волна уровня: вставляем Королеву Улья в толпу (на 78% от длины волны)
+  // Финальная волна уровня: вставляем Королеву Улья в толпу (на 78% от длины волны)
   if (levelWaveNumber === maxWaves - 1) {
     const baseBossTemplate = enemyTypes['boss'];
     const correspondingSpecies = enemyTypes[currentBossSpecies];
 
     const bossHp = Math.round(correspondingSpecies.hp * difficultyMultiplier * 4);
     const bossReward = Math.round(baseBossTemplate.reward * difficultyMultiplier);
-    const bossSpeed = +(correspondingSpecies.speed * 0.85).toFixed(2);
+    const bossSpeed = +(correspondingSpecies.speed * 0.95).toFixed(2);
+
+    const isFirstQueen = currentBossSpecies === 'normal';
+    const bossMissChance = isFirstQueen ? 0.15 : baseBossTemplate.missChance;
+    const bossDescription = isFirstQueen
+      ? 'Огромный босс волны. Повышенная манёвренность даёт 20% шанс уклонения от пуль. После уничтожения выпускает двух быстрых жуков своего вида.'
+      : baseBossTemplate.description;
 
     const fileSuffix = currentBossSpecies === 'normal' ? 'cockroach' : currentBossSpecies;
     const bossSpritePath = `./queen_${fileSuffix}.png`;
 
     // Позиция в очереди спавна на отметке ~78% от всей волны
-    const insertIndex = Math.floor(blueprint.length * 0.78);
+    const insertIndex = Math.floor(blueprint.length * 0.44);
 
     blueprint.splice(insertIndex, 0, {
       ...baseBossTemplate,
@@ -1020,6 +1031,8 @@ export const generateWaveBlueprint = (waveNumber, enemyTypes, roadPaths, current
       hp: bossHp,
       maxHp: bossHp,
       reward: bossReward,
+      missChance: bossMissChance,
+      description: bossDescription,
       spritePath: bossSpritePath,
       bloodColor: correspondingSpecies.bloodColor,
       assignedPathIndex: Math.floor(Math.random() * roadPaths.length),
@@ -1028,6 +1041,7 @@ export const generateWaveBlueprint = (waveNumber, enemyTypes, roadPaths, current
       bossSpeciesSource: currentBossSpecies
     });
   }
+
 
 
   return { blueprint, holeIndex, holePathIndex };

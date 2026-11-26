@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGameStore, LEVELS_CONFIG } from '../store/gameStore';
 import { showFullscreenAd } from '../utils/yandexAds';
+import { COMMANDER_VICTORY_LINES, OUTRO_SLIDES } from '../store/storyData';
+import { RadioCommBox } from './RadioCommBox';
 import styles from '../App.module.css';
 
 export const LevelCompleteModal = () => {
   const levelTransition = useGameStore((state) => state.levelTransition);
   const currentLevel = useGameStore((state) => state.currentLevel);
   const nextIncomingLevel = useGameStore((state) => state.nextIncomingLevel);
-  const score = useGameStore((state) => state.score);
   const nextLevel = useGameStore((state) => state.nextLevel);
+
+  const [outroStep, setOutroStep] = useState(0);
 
   if (!levelTransition) return null;
 
@@ -16,6 +19,7 @@ export const LevelCompleteModal = () => {
 
   const handleNextClick = () => {
     if (isGameCompleted) {
+      setOutroStep(0);
       nextLevel();
       return;
     }
@@ -24,31 +28,74 @@ export const LevelCompleteModal = () => {
     });
   };
 
+  // ФИНАЛ ИГРЫ (ПОСЛЕ 5-ГО УРОВНЯ)
+  if (isGameCompleted) {
+    const slide = OUTRO_SLIDES[outroStep] || OUTRO_SLIDES[0];
+    const isLastSlide = outroStep >= OUTRO_SLIDES.length - 1;
+
+    return (
+      <div className={styles.story_poster_overlay} style={{ zIndex: 75 }}>
+        <div
+          className={styles.story_poster_bg}
+          style={{ backgroundImage: "url('./story_outro.jpg')" }}
+        />
+        <div className={styles.story_poster_vignette} />
+
+        <div className={styles.story_bottom_panel}>
+          <RadioCommBox
+            speakerKey={slide.speaker}
+            badge={slide.badge}
+            text={slide.text}
+          />
+
+          <div className={styles.story_controls_row}>
+            <div className={styles.tutorial_dots} style={{ marginBottom: 0 }}>
+              {OUTRO_SLIDES.map((_, i) => (
+                <span
+                  key={i}
+                  className={styles.tutorial_dot}
+                  data-active={i === outroStep}
+                />
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => (isLastSlide ? handleNextClick() : setOutroStep((p) => p + 1))}
+              className={styles.supply_claim_btn}
+              style={{ padding: '10px 22px' }}
+            >
+              {isLastSlide ? 'НАЧАТЬ НОВУЮ ИГРУ' : 'ДАЛЕЕ ➔'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ОБЫЧНОЕ ЗАВЕРШЕНИЕ 1–4 УРОВНЕЙ
   return (
     <div className={styles.lvl_complete_overlay}>
-      <div className={styles.lvl_complete_card}>
+      <div className={styles.lvl_complete_card} style={{ width: '480px' }}>
         <div className={styles.lvl_complete_badge}>
-          {isGameCompleted ? 'ВСЕ СЕКТОРЫ ЗАЧИЩЕНЫ // ПОБЕДА' : `СЕКТОР ${currentLevel} ЗАЧИЩЕН`}
+          СЕКТОР {currentLevel} ЗАЧИЩЕН
         </div>
 
-        <h2 className={styles.lvl_complete_title}>
-          {isGameCompleted ? 'ПОЗДРАВЛЯЕМ! ИГРА ПРОЙДЕНА' : 'УРОВЕНЬ УСПЕШНО ПРОЙДЕН'}
-        </h2>
+        <h2 className={styles.lvl_complete_title}>УРОВЕНЬ УСПЕШНО ПРОЙДЕН</h2>
 
-        <div className={styles.lvl_complete_score_row}>
-          <span className={styles.lvl_complete_label}>
-            {isGameCompleted ? 'ИТОГОВЫЙ СЧЁТ:' : 'ТЕКУЩИЙ СЧЁТ:'}
-          </span>
-          <span className={styles.lvl_complete_val}>{score}</span>
-        </div>
+        <RadioCommBox
+          speakerKey="commander"
+          badge="ОТЧЁТ ШТАБА"
+          text={COMMANDER_VICTORY_LINES[currentLevel] || 'Рубеж удержан, командир!'}
+        />
 
         <button
           type="button"
           onClick={handleNextClick}
           className={styles.supply_claim_btn}
-          style={{ width: '100%', marginTop: '4px' }}
+          style={{ width: '100%', marginTop: '14px' }}
         >
-          {isGameCompleted ? 'НАЧАТЬ НОВУЮ ИГРУ' : 'ДАЛЕЕ'}
+          ДАЛЕЕ
         </button>
       </div>
     </div>

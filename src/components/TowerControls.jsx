@@ -26,11 +26,11 @@ export const TowerControls = () => {
 
 
   // Математика урона ракеты
-  let rocketDamage = Math.round(1000 * Math.pow(1.2, currentLvl - 1));
+  let rocketDamage = Math.round(2500 * Math.pow(1.2, currentLvl - 1));
   if (activeTower.specialization === 'nuke') {
     rocketDamage = Math.round(rocketDamage * 1.5);
   } else if (activeTower.specialization === 'grad') {
-    rocketDamage = Math.round(1000 * Math.pow(1.2, 3));
+    rocketDamage = Math.round(2500 * Math.pow(1.2, 3));
   }
 
 

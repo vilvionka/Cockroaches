@@ -122,7 +122,7 @@ export const StartScreen = ({ onStartGame }) => {
               НАЧАТЬ НОВУЮ ИГРУ?
             </h2>
             <p className={styles.emergency_desc}>
-              Текущий прогресс уровней и набранные очки будут сброшены, а кампания начнётся с 1-го уровня.
+              Текущий прогресс уровней будет сброшен, а кампания начнётся с 1-го сектора.
             </p>
             <div className={styles.confirm_btn_row}>
               <button

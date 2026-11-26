@@ -1,5 +1,7 @@
 import React from 'react';
 import { useGameStore } from '../store/gameStore';
+import { RadioCommBox } from './RadioCommBox';
+import { COMMANDER_GAMEOVER_LINE } from '../store/storyData';
 import styles from '../App.module.css';
 
 const ENEMY_KEYS_ORDER = [
@@ -13,14 +15,12 @@ const ENEMY_KEYS_ORDER = [
 
 export const GameOverModal = () => {
   const gameOver = useGameStore((state) => state.gameOver);
-  const score = useGameStore((state) => state.score);
   const killedStats = useGameStore((state) => state.killedStats);
   const enemyTypes = useGameStore((state) => state.enemyTypes);
   const restartGame = useGameStore((state) => state.restartGame);
 
   if (!gameOver) return null;
 
-  // Оставляем только тех жуков, которых убили хотя бы 1 раз, и берем их актуальные имена из стора
   const killedEnemiesList = ENEMY_KEYS_ORDER
     .filter((item) => (killedStats?.[item.key] || 0) > 0)
     .map((item) => {
@@ -35,13 +35,23 @@ export const GameOverModal = () => {
 
   return (
     <div className={styles.gameover_overlay}>
-      <div className={styles.gameover_card}>
+      <div
+        className={styles.gameover_poster_bg}
+        style={{ backgroundImage: "url('./story_gameover.jpg')" }}
+      />
+      <div className={styles.gameover_poster_vignette} />
+
+      <div className={styles.gameover_card} style={{ width: '430px', position: 'relative', zIndex: 2 }}>
         <div className={styles.gameover_subtitle}>СИСТЕМА ОБОРОНЫ ПРОРВАНА</div>
         <h1 className={styles.gameover_title}>GAME OVER</h1>
 
-        <div className={styles.gameover_total_box}>
-          <span className={styles.gameover_total_label}>TOTAL SCORE:</span>
-          <span className={styles.gameover_total_value}>{score}</span>
+        <div style={{ width: '100%', marginBottom: '12px' }}>
+          <RadioCommBox
+            speakerKey="commander"
+            badge="ЭКСТРЕННАЯ СВЯЗЬ // БАЗА ПОТЕРЯНА"
+            text={COMMANDER_GAMEOVER_LINE}
+            alertMode={true}
+          />
         </div>
 
         {killedEnemiesList.length > 0 && (
