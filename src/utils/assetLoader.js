@@ -80,6 +80,17 @@ export const preloadAllAssets = (onProgress) => {
     };
 
     register(assets.poster, './poster.jpg');
+    [
+      './char_commander.png',
+      './char_pilot.png',
+      './char_ai.png',
+      './story_intro.jpg',
+      './story_outro.jpg',
+      './story_gameover.jpg',
+      './drop.jpg'
+    ].forEach((src) => {
+      register({ img: new Image(), loaded: false }, src);
+    });
     register(assets.base, './base.png');
     register(assets.scorchCrater, './scorch_crater.png');
     register(assets.silo_rocket, './silo_rocket.png');

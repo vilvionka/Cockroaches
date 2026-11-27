@@ -335,6 +335,25 @@ export const getShiftedLevelData = (levelNum) => {
 };
 
 
+const createWaveCheckpoint = (state, waveNum, levelWaveNum, towersSnapshot) => ({
+  currentLevel: state.currentLevel,
+  waveNumber: waveNum,
+  levelWaveNumber: levelWaveNum,
+  gold: state.gold,
+  cakeHp: Math.max(30, state.cakeHp), // Минимум 30 HP при возрождении, чтобы был шанс отбиться
+  maxCakeHp: state.maxCakeHp || 100,
+  score: state.score,
+  killedStats: { ...state.killedStats },
+  boostsInventory: { ...state.boostsInventory },
+  bonusTowerLimits: { ...(state.bonusTowerLimits || { gun: 0, bomb: 0, frost: 0, mlrs: 0 }) },
+  towers: towersSnapshot.map((t) => ({
+    ...t,
+    activeBoosts: t.activeBoosts ? { ...t.activeBoosts } : undefined
+  }))
+});
+
+
+
 
 
 
@@ -363,6 +382,8 @@ export const useGameStore = create((set, get) => ({
   roadPaths: getShiftedLevelData(1).paths,
   decorations: getShiftedLevelData(1).decorations,
 
+  waveCheckpoint: null,
+  reviveAdsWatched: 0,
 
 
   enemies: [],
@@ -565,7 +586,7 @@ export const useGameStore = create((set, get) => ({
     },
     bomb: {
       type: 'bomb',
-      name: 'Бомбарда',
+      name: 'Грантомет',
       cost: 200,
       range: 85,
       damage: 165,
@@ -583,11 +604,11 @@ export const useGameStore = create((set, get) => ({
       isAntenna: false,
       baseLimit: 4
     },
-    frost: { type: 'frost', name: 'Заморозка', cost: 300, range: 100, damage: 30, fireRate: 40, size: 50, bulletType: 'frost', slowDuration: 120, slowFactor: 0.5, unlockWave: 3, rotationSpeed: 0.04, isAntenna: false, baseLimit: 3 },
+    frost: { type: 'frost', name: 'Криоген', cost: 300, range: 100, damage: 30, fireRate: 40, size: 50, bulletType: 'frost', slowDuration: 120, slowFactor: 0.5, unlockWave: 3, rotationSpeed: 0.04, isAntenna: false, baseLimit: 3 },
 
     silo: {
       type: 'silo',
-      name: 'Ракетница',
+      name: 'Ракета',
       cost: 500,
       range: 9999,
       size: 60,
@@ -1160,12 +1181,12 @@ export const useGameStore = create((set, get) => ({
         } else if (specType === 'fire_ammo') { // Зажигательные пули
           specModifiers.name = 'Пулемет (ЗП)';
           specModifiers.bulletType = 'fire';
-        } else if (specType === 'big_splash') { // Бомбарда: урон по площади
-          specModifiers.name = 'Бомбарда (АОЕ)';
+        } else if (specType === 'big_splash') { // Грантомет: урон по площади
+          specModifiers.name = 'Грантомет (АОЕ)';
           specModifiers.splashRadius = Math.round(t.splashRadius * 1.6);
           specModifiers.splashDamage = Math.round(t.splashDamage * 1.5);
-        } else if (specType === 'heavy_target') { // Бомбарда: урон по цели
-          specModifiers.name = 'Бомбарда (Сигма)';
+        } else if (specType === 'heavy_target') { // Грантомет: урон по цели
+          specModifiers.name = 'Грантомет (Сигма)';
           specModifiers.damage = Math.round(t.damage * 2.2);
           specModifiers.minDamage = Math.round(t.minDamage * 2.2);
           specModifiers.maxDamage = Math.round(t.maxDamage * 2.2);
@@ -1450,6 +1471,9 @@ export const useGameStore = create((set, get) => ({
       }
     }
 
+    const checkpoint = createWaveCheckpoint(state, nextWaveNumber, nextLevelWaveNumber, resetTowers);
+
+
     return {
       waveNumber: nextWaveNumber,
       levelWaveNumber: nextLevelWaveNumber,
@@ -1463,7 +1487,10 @@ export const useGameStore = create((set, get) => ({
       activeHoleIndex: holeIndex,
       emergencyStrikeUsed: false,
       emergencyCooldown: 0,
-      activeHolePathIndex: holePathIndex
+      activeHolePathIndex: holePathIndex,
+      waveCheckpoint: checkpoint,
+      reviveAdsWatched: 0,
+
     };
   }),
 
@@ -1593,6 +1620,15 @@ export const useGameStore = create((set, get) => ({
       state.activeHolePathIndex = holePathIndex;
       state.emergencyStrikeUsed = false;
       state.emergencyCooldown = 0;
+
+      state.waveCheckpoint = createWaveCheckpoint(
+        state,
+        nextWaveNumber,
+        nextLevelWaveNumber,
+        currentTowersState
+      );
+      state.reviveAdsWatched = 0;
+
 
       let autoExplosions = [];
       if (holeIndex !== null) {
@@ -1946,6 +1982,7 @@ export const useGameStore = create((set, get) => ({
             levelWaveNumber: state.levelWaveNumber,
             waveTimer: 0,
             waveActive: true,
+            waveCheckpoint: state.waveCheckpoint,
             spawnTimer: spawnData.spawnTimer,
             spawnQueue: [],
             enemies: finalAliveEnemies,
@@ -2014,6 +2051,7 @@ export const useGameStore = create((set, get) => ({
       levelWaveNumber: state.levelWaveNumber,
       waveTimer,
       waveActive,
+      waveCheckpoint: state.waveCheckpoint,
       spawnTimer: spawnData.spawnTimer,
       spawnQueue: spawnData.spawnQueue,
       enemies: finalAliveEnemies,
@@ -2038,6 +2076,67 @@ export const useGameStore = create((set, get) => ({
     };
 
   }),
+
+  incrementReviveAd: () => set((state) => ({
+    reviveAdsWatched: (state.reviveAdsWatched || 0) + 1
+  })),
+
+  restoreWaveCheckpoint: () => set((state) => {
+    const cp = state.waveCheckpoint;
+    if (!cp || cp.currentLevel !== state.currentLevel) return {};
+
+    // Восстанавливаем состояние перед началом проигранной волны (игрок может сразу нажать «В БОЙ!» или дождаться таймера)
+    const restoredTowers = cp.towers.map((t) => ({
+      ...t,
+      cooldown: 0,
+      recoilOffset: 0,
+      targetEnemyId: null,
+      activeBoosts: t.activeBoosts ? { ...t.activeBoosts } : undefined
+    }));
+
+    window.ysdk?.features?.GameplayAPI?.start();
+
+    return {
+      currentLevel: cp.currentLevel,
+      waveNumber: Math.max(0, cp.waveNumber - 1),
+      levelWaveNumber: Math.max(0, cp.levelWaveNumber - 1),
+      gold: cp.gold,
+      cakeHp: cp.cakeHp,
+      maxCakeHp: cp.maxCakeHp,
+      score: cp.score,
+      killedStats: { ...cp.killedStats },
+      boostsInventory: { ...cp.boostsInventory },
+      bonusTowerLimits: { ...cp.bonusTowerLimits },
+      towers: restoredTowers,
+      enemies: [],
+      spawnQueue: [],
+      spawnTimer: 0,
+      waveTimer: 900, // 15 секунд на перестановку или мгновенный старт кнопкой «В БОЙ!»
+      waveActive: false,
+      gameOver: false,
+      isUserPaused: false,
+      isStoryPaused: false,
+      isEmergencyAdOpen: false,
+      emergencyStrikeUsed: false,
+      emergencyCooldown: 0,
+      emergencyTarget: null,
+      bullets: [],
+      explosions: [],
+      damageTexts: [],
+      slimeTrails: [],
+      particles: [],
+      droppedItems: [],
+      flyingRockets: [],
+      scorches: [],
+      activeHoleIndex: null,
+      selectedTowerId: null,
+      selectedTowerType: null,
+      buildPreview: null,
+      isAimingRocket: false,
+      reviveAdsWatched: 0
+    };
+  }),
+
 
 
 

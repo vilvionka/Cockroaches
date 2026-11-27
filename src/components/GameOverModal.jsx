@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { RadioCommBox } from './RadioCommBox';
 import { COMMANDER_GAMEOVER_LINE } from '../store/storyData';
+import { showRewardedAd } from '../utils/yandexAds';
 import styles from '../App.module.css';
 
 const ENEMY_KEYS_ORDER = [
@@ -13,13 +14,28 @@ const ENEMY_KEYS_ORDER = [
   { key: 'boss', fallbackSprite: './queen_cockroach.png' },
 ];
 
+const REQUIRED_REVIVE_ADS = 3;
+
 export const GameOverModal = () => {
   const gameOver = useGameStore((state) => state.gameOver);
+  const currentLevel = useGameStore((state) => state.currentLevel);
+  const waveCheckpoint = useGameStore((state) => state.waveCheckpoint);
+  const reviveAdsWatched = useGameStore((state) => state.reviveAdsWatched || 0);
   const killedStats = useGameStore((state) => state.killedStats);
   const enemyTypes = useGameStore((state) => state.enemyTypes);
+
   const restartGame = useGameStore((state) => state.restartGame);
+  const incrementReviveAd = useGameStore((state) => state.incrementReviveAd);
+  const restoreWaveCheckpoint = useGameStore((state) => state.restoreWaveCheckpoint);
+
+  const [isLoadingAd, setIsLoadingAd] = useState(false);
 
   if (!gameOver) return null;
+
+  const canReviveAtWave =
+    Boolean(waveCheckpoint) &&
+    waveCheckpoint.currentLevel === currentLevel &&
+    waveCheckpoint.levelWaveNumber >= 1;
 
   const killedEnemiesList = ENEMY_KEYS_ORDER
     .filter((item) => (killedStats?.[item.key] || 0) > 0)
@@ -32,6 +48,25 @@ export const GameOverModal = () => {
         count: killedStats[item.key]
       };
     });
+
+  const handleWatchReviveAd = () => {
+    if (isLoadingAd || !canReviveAtWave) return;
+    setIsLoadingAd(true);
+
+    showRewardedAd({
+      onRewarded: () => {
+        const nextCount = useGameStore.getState().reviveAdsWatched + 1;
+        if (nextCount >= REQUIRED_REVIVE_ADS) {
+          restoreWaveCheckpoint();
+        } else {
+          incrementReviveAd();
+        }
+      },
+      onClose: () => {
+        setIsLoadingAd(false);
+      }
+    });
+  };
 
   return (
     <div className={styles.gameover_overlay}>
@@ -76,9 +111,29 @@ export const GameOverModal = () => {
           </>
         )}
 
-        <button onClick={restartGame} className={styles.gameover_restart_btn}>
-          ПЕРЕЗАПУСТИТЬ ОБОРОНУ
-        </button>
+        <div className={styles.gameover_actions}>
+          {canReviveAtWave && (
+            <button
+              type="button"
+              disabled={isLoadingAd}
+              onClick={handleWatchReviveAd}
+              className={styles.gameover_revive_btn}
+            >
+              {isLoadingAd
+                ? 'ЗАГРУЗКА ТРАНСЛЯЦИИ...'
+                : `▶ ВОССТАНОВИТЬ ВОЛНУ ${waveCheckpoint.levelWaveNumber} (${reviveAdsWatched}/${REQUIRED_REVIVE_ADS} РЕКЛАМЫ)`}
+            </button>
+          )}
+
+          <button
+            type="button"
+            disabled={isLoadingAd}
+            onClick={restartGame}
+            className={styles.gameover_restart_btn}
+          >
+            ПЕРЕЗАПУСТИТЬ ОБОРОНУ (С 1 ВОЛНЫ)
+          </button>
+        </div>
       </div>
     </div>
   );

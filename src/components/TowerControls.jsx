@@ -36,8 +36,22 @@ export const TowerControls = () => {
 
   return (
     <div className={styles.upgrade_panel}>
-      <div className={styles.bar_gun}>Управление модулем:</div>
+      <div className={styles.upgrade_header_row}>
+        <div className={styles.bar_gun} style={{ marginBottom: 0 }}>
+          Управление модулем:
+        </div>
+        <button
+          type="button"
+          onClick={() => useGameStore.getState().closeTowerMenu()}
+          className={styles.close_panel_btn}
+          title="Закрыть и вернуться в магазин"
+        >
+          ✕
+        </button>
+      </div>
+
       <div className={styles.panel_tower_name}>{activeTower.name}</div>
+
       <div className={styles.panel_tower_level}>
         Модификация: <span className={styles.cyan_text}>LVL {currentLvl}</span>
       </div>

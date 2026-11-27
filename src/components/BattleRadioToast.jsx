@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore, getShiftedLevelData, getMaxTowerLimit } from '../store/gameStore';
 import { calculateNetworkGraph } from '../store/gameHelpers';
-import { ENEMY_INTEL_TOASTS, TUTORIAL_BATTLE_TIPS } from '../store/storyData';
+import { ENEMY_INTEL_TOASTS, TUTORIAL_BATTLE_TIPS, PORTAL_ALERT_TOAST } from '../store/storyData';
 import { RadioCommBox } from './RadioCommBox';
 import styles from '../App.module.css';
 
@@ -34,6 +34,8 @@ export const BattleRadioToast = () => {
   const prevTotalBoostsRef = useRef(0);
   const timerRef = useRef(null);
   const flyTimerRef = useRef(null);
+  const activeHoleIndex = useGameStore((state) => state.activeHoleIndex);
+  const announcedHoleWaveRef = useRef(null);
 
   const clearTimers = () => {
     if (timerRef.current) {
@@ -81,9 +83,12 @@ export const BattleRadioToast = () => {
       boostTipShownRef.current = false;
       upgradeTipShownRef.current = false;
       prevTotalBoostsRef.current = 0;
+      announcedHoleWaveRef.current = null;
       clearTimers();
       setIsFlyingToHud(false);
       setToastData(null);
+
+
     }
   }, [currentLevel, waveNumber]);
 
@@ -113,6 +118,27 @@ export const BattleRadioToast = () => {
       );
     }
   }, [currentLevel, waveNumber, selectedTowerType, towers.length]);
+
+  // Тревога при открытии пространственного портала (чёрной дыры) на трассе
+  useEffect(() => {
+    if (!waveActive || activeHoleIndex === null || activeHoleIndex === undefined) return;
+
+    const holeKey = `${currentLevel}_${waveNumber}`;
+    if (announcedHoleWaveRef.current === holeKey) return;
+
+    announcedHoleWaveRef.current = holeKey;
+    showToast(
+      {
+        speaker: 'ai',
+        badge: PORTAL_ALERT_TOAST.badge,
+        text: PORTAL_ALERT_TOAST.text,
+        alertMode: true
+      },
+      6500,
+      false
+    );
+  }, [waveActive, activeHoleIndex, currentLevel, waveNumber]);
+
 
 
   // 1. Подсказка при первом подборе буста с дороги во время боя на 1-м уровне

@@ -932,10 +932,12 @@ export const generateWaveBlueprint = (waveNumber, enemyTypes, roadPaths, current
   if (levelWaveNumber >= 4 && Math.random() < 0.4) {
     holePathIndex = Math.floor(Math.random() * roadPaths.length);
     const chosenPath = roadPaths[holePathIndex];
-    if (chosenPath && chosenPath.length > 3) {
-      holeIndex = Math.floor(1 + Math.random() * (chosenPath.length - 3));
+    // Индекс 0 — край экрана (x=0), индекс 1 — входная прямая (x=120), поэтому берём от 2 до length - 3 (только внутренние повороты)
+    if (chosenPath && chosenPath.length > 4) {
+      holeIndex = Math.floor(2 + Math.random() * (chosenPath.length - 4));
     }
   }
+
 
   // Массив видов жуков по уровням: 1 - скаут, 2 - стридер, 3 - панцирник, 4 - пиро-рейнджер, 5 - джаггернаут
   const levelBossOrder = ['normal', 'ant', 'beetle', 'fly', 'rhino'];

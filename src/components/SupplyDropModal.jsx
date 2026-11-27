@@ -49,8 +49,8 @@ const LOOT_POOL = [
     rarity: 'rare',
     rarityLabel: 'РЕДКИЙ КОНТРАКТ',
     icon: '❄️',
-    title: '+1 ЗАМОРОЗКА И УСИЛИТЕЛИ',
-    desc: '+1 к лимиту Заморозки, +1 Радиус (R) и +1 Скорость (F)',
+    title: '+1 КРИОГЕН И УСИЛИТЕЛИ',
+    desc: '+1 к лимиту Криогена, +1 Радиус (R) и +1 Скорость (F)',
     reward: { type: 'towerLimit', tower: 'frost', amount: 1, boosts: { damage: 0, fireRate: 1, range: 1 } }
   },
   {
@@ -78,8 +78,8 @@ const LOOT_POOL = [
     rarity: 'legendary',
     rarityLabel: 'ДЖЕКПОТ СНАБЖЕНИЯ',
     icon: '💣',
-    title: '+1 БОМБАРДА, +100 КР. И БУСТЫ',
-    desc: 'Доп. Бомбарда, 100 кр. и по +1 усилителю (D, F, R)',
+    title: '+1 Грантомет, +100 КР. И БУСТЫ',
+    desc: 'Доп. Грантомет, 100 кр. и по +1 усилителю (D, F, R)',
     reward: { type: 'comboBomb', tower: 'bomb', amount: 1, gold: 100, boosts: { damage: 1, fireRate: 1, range: 1 } }
   },
   {
